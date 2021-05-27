@@ -8,11 +8,11 @@
  * 
  */
 
-#ifndef UTILS_GPIO_HPP
-#define UTILS_GPIO_HPP
+#ifndef  GPIO_HPP
+#define  GPIO_HPP
 #include <driver/gpio.h>
 
-namespace hardwareInterface
+namespace externalHardwareInterface
 {
 enum class gpioDirection
 {
@@ -47,16 +47,18 @@ public:
 	static constexpr gpioDirection input{gpioDirection::input};
 	static constexpr gpioDirection output{gpioDirection::output};
 
-	gpio(gpio_num_t pin, gpioDirection direction);
+	gpio(gpio_num_t pin, gpioDirection direction, bool inverted = false);
 
 	bool read();
 	esp_err_t write(bool value);
 
+	esp_err_t on();
+	esp_err_t off();
 	const gpio_num_t& getPin();
 private:
 	const gpio_num_t m_pin;
 	gpioDirection m_direction;
-
+	bool inverted;
 };
 
 }
