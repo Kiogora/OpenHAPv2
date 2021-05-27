@@ -25,13 +25,8 @@ extern "C" void app_main()
     /*I2C bus mutex to avoid bus contention*/
     SemaphoreHandle_t i2cBusAccessMutex{xSemaphoreCreateMutex()};
 
-    /*Get image size from object definition*/
-    const size_t& imageSize = externalHardwareSubsystem::thermalImaging::MLX90641::pixelCount;
-    /*Thermal image buffer*/
-    float thermalImage[imageSize] = {0};
     /*Thermal imager max temperature variable*/
-    float maxThermalTemperature = 0.;
-    
+    float maxThermalTemperature = 0.;    
     /*PM 2.5 measurement variable*/
     uint16_t pollutantConcentration = 0;
 
@@ -39,12 +34,15 @@ extern "C" void app_main()
     externalHardwareSubsystem::particulateSensor::SDS011 particulateSensor(GPIO_NUM_22, GPIO_NUM_23, GPIO_NUM_26);
     externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager(i2cBusAccessMutex);
 
-    thermalImager.getAndPrintImage(thermalImage);
-    maxThermalTemperature = softwareUtilities::stats::findMax(thermalImage, static_cast<size_t>(imageSize));
-    ESP_LOGI(TAG, "Max thermal temperature: %f°C", maxThermalTemperature);
-
+    ESP_LOGI(TAG, "Thermal imager refresh rate: %f Hz", thermalImager.getPrintableRefreshRate());
+    ESP_LOGI(TAG, "Thermal imager resolution: %d bit", thermalImager.getPrintableResolution());
+    
     while (1)
     {
+        maxThermalTemperature = softwareUtilities::stats::findMax(thermalImager.getAndPrintImage(), static_cast<size_t>(thermalImager.pixelCount));
+        ESP_LOGI(TAG, "Max thermal temperature: %f°C", maxThermalTemperature);
+
         particulateSensor.getParticulateMeasurement(pollutantConcentration);
+        ESP_LOGI(TAG, "PM 2.5 value: %u μg/m³", pollutantConcentration);
     }
 }
