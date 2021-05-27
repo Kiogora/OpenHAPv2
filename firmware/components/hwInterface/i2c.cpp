@@ -18,8 +18,8 @@ static const char* TAG = "externalHardwareInterface::i2cBus";
  * @brief Create an instance of an %i2c object.
  * @return N/A.
  */
-externalHardwareInterface::i2cBus::i2cBus(SemaphoreHandle_t& i2cBusMutex, gpio_num_t sdaPin, gpio_num_t sclPin, uint32_t clockSpeed, i2c_port_t portNum, bool pullupsState):
-m_sdaPin(sdaPin), m_sclPin(sclPin), m_portNum(portNum), m_busMutex(i2cBusMutex)
+externalHardwareInterface::i2cBus::i2cBus(gpio_num_t sdaPin, gpio_num_t sclPin, uint32_t clockSpeed, i2c_port_t portNum, bool pullupsState):
+m_sdaPin(sdaPin), m_sclPin(sclPin), m_portNum(portNum)
 {
 	ESP_LOGD(TAG, ">> i2cDevice::i2c. sda=%d, scl=%d, clockSpeed=%d, portNum=%d", sdaPin, sclPin, clockSpeed, portNum);
 	assert(portNum < I2C_NUM_MAX);
@@ -43,7 +43,9 @@ m_sdaPin(sdaPin), m_sclPin(sclPin), m_portNum(portNum), m_busMutex(i2cBusMutex)
 	{
         ESP_LOGE(TAG, "i2c_driver_install: rc=%d %s", err, esp_err_to_name(err));
     }
-	//Throw an exception if i2c device fails
+	
+	/*I2C bus mutex to avoid bus contention*/
+    m_busMutex={(SemaphoreHandle_t)xSemaphoreCreateMutex()};
 }
 
 void externalHardwareInterface::i2cBus::scanBusAddresses()

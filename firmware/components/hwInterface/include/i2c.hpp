@@ -28,14 +28,14 @@ public:
     static constexpr bool pullupsEnable{true};
 
     /*Parameterized constructor*/
-    i2cBus(SemaphoreHandle_t& i2cBusMutex, gpio_num_t sdaPin = GPIO_NUM_21, gpio_num_t sclPin = GPIO_NUM_19, uint32_t clockSpeed = 100000, 
-    i2c_port_t portNum = I2C_NUM_0, bool pullupsState = pullupsDisable);
+    i2cBus(gpio_num_t sdaPin = GPIO_NUM_21, gpio_num_t sclPin = GPIO_NUM_19, uint32_t clockSpeed = 100000, 
+           i2c_port_t portNum = I2C_NUM_0, bool pullupsState = pullupsDisable);
 
     void scanBusAddresses();
     bool isPresent(uint8_t address);
 
 
-    SemaphoreHandle_t getMutex()
+    SemaphoreHandle_t& getMutex()
     {
         return m_busMutex;
     }
@@ -50,7 +50,7 @@ private:
     const gpio_num_t     m_sdaPin;
     const gpio_num_t	 m_sclPin;
     i2c_port_t	         m_portNum;
-    SemaphoreHandle_t&   m_busMutex;
+    SemaphoreHandle_t   m_busMutex;
 
 };
 }
