@@ -42,18 +42,24 @@ namespace externalHardwareSubsystem
         /*Compile time assertions based on nature of the hardware*/
         static_assert(factorySetAddress==0x33U, "MLX90641 I2C address not default. Check datasheet");
         static_assert(pixelCount==192U, "MLX90641 pixel count not default. Check datasheet");
+
+        /*Configuration options*/
+        enum struct supportedRefreshRates: uint8_t{_0_5Hz = 0x00,_1Hz = 0x01,_2Hz = 0x02,_4Hz = 0x03,_8Hz = 0x04, _16Hz = 0x05,_32Hz = 0x06, _64Hz = 0x07};
+        enum struct supportedResolutions: uint8_t{_16bit = 0x00,_17bit = 0x01,_18bit = 0x02,_19bit = 0x03};
     
         /*Constructor methods*/
         MLX90641(SemaphoreHandle_t& i2cBusMutex, uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
         MLX90641(const externalHardwareInterface::i2cBus& otherBusDevice, uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
 
+        /*Data acquisition functions*/
         void GetImage(float *result);
         void BadPixelsCorrection(uint16_t pixel, float *to);
         void getAndPrintImage(float* mlx90641Image);
 
-        int SetResolution(uint8_t resolution);
+        /*Configuration functions*/
+        int SetResolution(supportedResolutions resolution);
         int GetCurResolution();
-        int SetRefreshRate(uint8_t refreshRate);   
+        int SetRefreshRate(supportedRefreshRates refreshRate);   
         int GetRefreshRate();  
 
 

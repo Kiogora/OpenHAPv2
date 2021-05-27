@@ -534,13 +534,13 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::ExtractParameters(uint1
 
 //------------------------------------------------------------------------------
 
-int externalHardwareSubsystem::thermalImaging::MLX90641::SetResolution(uint8_t resolution)
+int externalHardwareSubsystem::thermalImaging::MLX90641::SetResolution(supportedResolutions resolution)
 {
     uint16_t controlRegister1;
     int value;
     int error;
     
-    value = (resolution & 0x03) << 10;
+    value = (static_cast<int>(resolution) & 0x03) << 10;
     
     error = read(0x800D, 1, &controlRegister1);
     
@@ -573,13 +573,13 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::GetCurResolution()
 
 //------------------------------------------------------------------------------
 
-int externalHardwareSubsystem::thermalImaging::MLX90641::SetRefreshRate(uint8_t refreshRate)
+int externalHardwareSubsystem::thermalImaging::MLX90641::SetRefreshRate(supportedRefreshRates refreshRate)
 {
     uint16_t controlRegister1;
     int value;
     int error;
     
-    value = (refreshRate & 0x07)<<7;
+    value = (static_cast<int>(refreshRate) & 0x07)<<7;
     
     error = read(0x800D, 1, &controlRegister1);
     if(error == 0)
