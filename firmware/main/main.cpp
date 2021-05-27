@@ -16,30 +16,33 @@
 //#include "ds3231.hpp"
 #include "mlx90641.hpp"
 #include "sds011.hpp"
+#include "statistics.hpp"
 
 static const char *TAG = "Main";
 
 extern "C" void app_main()
 {
+    /*I2C bus mutex to avoid bus contention*/
     SemaphoreHandle_t i2cBusAccessMutex{xSemaphoreCreateMutex()};
-    bool unifiedGpioState = false;
+    
     /*Thermal image buffer*/
     float thermalImage[externalHardwareSubsystem::thermalImaging::MLX90641::pixelCount] = {0};
+    /*Thermal imager max temperature variable*/
+    float maxThermalTemperature = 0;
+    
     /*PM 2.5 measurement variable*/
-    uint16_t pollutantConcentration;
-    float maxThermalTemperature;
+    uint16_t pollutantConcentration = 0;
 
     //externalHardwareInterface::gpio warningLed(GPIO_NUM_18, externalHardwareInterface::gpio::output);
     externalHardwareSubsystem::particulateSensor::SDS011 particulateSensor(GPIO_NUM_22, GPIO_NUM_23, GPIO_NUM_26);
     externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager(i2cBusAccessMutex);
 
     thermalImager.getAndPrintImage(thermalImage);
-    while (1) {
-        //unifiedGpioState? warningLed.on() : warningLed.off();
-        particulateSensor.getMeasurementPoint(pollutantConcentration);
+    maxThermalTemperature = softwareUtilities::stats::findMax(thermalImage, sizeof(thermalImage)/sizeof(thermalImage[0]));
+    ESP_LOGI(TAG, "Max thermal temperature: %f°C", maxThermalTemperature);
 
-        /* Toggle the LED state */
-        //unifiedGpioState = !unifiedGpioState;
-        vTaskDelay(5000/portTICK_RATE_MS);
+    while (1)
+    {
+        particulateSensor.getParticulateMeasurement(pollutantConcentration);
     }
 }
