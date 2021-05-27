@@ -12,7 +12,7 @@
 #include <freertos/semphr.h>
 #include "i2c.hpp"
 
-static const char* LOG_TAG = "i2c";
+static const char* TAG = "externalHardwareInterface::i2cBus";
 
 /**
  * @brief Create an instance of an %i2c object.
@@ -21,7 +21,7 @@ static const char* LOG_TAG = "i2c";
 externalHardwareInterface::i2cBus::i2cBus(SemaphoreHandle_t& i2cBusMutex, gpio_num_t sdaPin, gpio_num_t sclPin, uint32_t clockSpeed, i2c_port_t portNum, bool pullupsState):
 m_sdaPin(sdaPin), m_sclPin(sclPin), m_portNum(portNum), m_busMutex(i2cBusMutex)
 {
-	ESP_LOGD(LOG_TAG, ">> i2cDevice::i2c. sda=%d, scl=%d, clockSpeed=%d, portNum=%d", sdaPin, sclPin, clockSpeed, portNum);
+	ESP_LOGD(TAG, ">> i2cDevice::i2c. sda=%d, scl=%d, clockSpeed=%d, portNum=%d", sdaPin, sclPin, clockSpeed, portNum);
 	assert(portNum < I2C_NUM_MAX);
 
 	i2c_config_t conf;
@@ -35,13 +35,13 @@ m_sdaPin(sdaPin), m_sclPin(sclPin), m_portNum(portNum), m_busMutex(i2cBusMutex)
 	esp_err_t err = i2c_param_config(m_portNum, &conf);
 	if (err != ESP_OK)
     {
-		ESP_LOGE(LOG_TAG, "I2C_param_config: rc=%d %s", err, esp_err_to_name(err));
+		ESP_LOGE(TAG, "I2C_param_config: rc=%d %s", err, esp_err_to_name(err));
 	}
 
     err = i2c_driver_install(m_portNum, I2C_MODE_MASTER, 0, 0, 0);
     if (err != ESP_OK)
 	{
-        ESP_LOGE(LOG_TAG, "i2c_driver_install: rc=%d %s", err, esp_err_to_name(err));
+        ESP_LOGE(TAG, "i2c_driver_install: rc=%d %s", err, esp_err_to_name(err));
     }
 	//Throw an exception if i2c device fails
 }

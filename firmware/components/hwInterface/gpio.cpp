@@ -10,7 +10,7 @@
 #include <esp_err.h>
 #include "gpio.hpp"
 
-static const char* LOG_TAG = "gpio";
+static const char* TAG = "externalHardwareInterface::gpio";
 
 externalHardwareInterface::gpio::gpio(gpio_num_t pin, gpioDirection direction, bool inverted):m_pin(pin), m_direction(direction), inverted(inverted)
 {	
@@ -29,7 +29,7 @@ bool externalHardwareInterface::gpio::read()
 {
 	if(m_direction == output)
 	{
-		ESP_LOGE(LOG_TAG, "Pins is not configured for input (or input and output");
+		ESP_LOGE(TAG, "Pins is not configured for input (or input and output");
 	}
 
 	bool val;
@@ -43,7 +43,7 @@ esp_err_t externalHardwareInterface::gpio::write(bool value)
 	esp_err_t err = inverted? gpio_set_level(m_pin, value ? 0 : 1): gpio_set_level(m_pin, value ? 1: 0);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(LOG_TAG, "<< gpio_set_level: pin=%d, err=%d %s", m_pin, err, esp_err_to_name(err));
+		ESP_LOGE(TAG, "<< gpio_set_level: pin=%d, err=%d %s", m_pin, err, esp_err_to_name(err));
 		return err;
 	}
 	return ESP_OK;
