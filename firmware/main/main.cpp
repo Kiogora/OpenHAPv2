@@ -40,7 +40,7 @@ extern "C" void app_main()
     externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager(i2cBusAccessMutex);
 
     thermalImager.getAndPrintImage(thermalImage);
-    maxThermalTemperature = softwareUtilities::stats::findMax(thermalImage, imageSize);
+    maxThermalTemperature = softwareUtilities::stats::findMax(thermalImage, static_cast<size_t>(imageSize));
     ESP_LOGI(TAG, "Max thermal temperature: %f°C", maxThermalTemperature);
 
     while (1)
