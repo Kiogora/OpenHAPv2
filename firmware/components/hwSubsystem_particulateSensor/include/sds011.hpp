@@ -1,0 +1,46 @@
+#ifndef  SDS011_HPP
+#define  SDS011_HPP
+
+#include "driver/gpio.h"
+#include "driver/uart.h"
+#include "gpio.hpp"
+
+namespace externalHardwareSubsystem
+{
+    namespace particulateSensor
+    {
+    /* Class is final and can't be overriden. */
+    class SDS011: public externalHardwareInterface::gpio
+    {
+    public:
+    static constexpr uint32_t recommendedQueryDelayMs{3000};
+    static constexpr uint32_t measurementStabilityMs{30000};
+    static constexpr uint32_t dataIntervalMs{1000};
+
+    static constexpr int activeReportingMeasurementLength{10};
+    static constexpr int readBufferByteSize{(measurementStabilityMs/dataIntervalMs)*activeReportingMeasurementLength};
+    
+    static constexpr uint32_t defaultBaudrate{9600};
+
+    /*Compile time assertions based on nature of the hardware*/
+    static_assert(defaultBaudrate == 9600U, "Baudrate not default. Check: Laser_Dust_Sensor_Control_Protocol_V1.3 PDF");
+    static_assert(recommendedQueryDelayMs == 3000U, "Minimum sampling interval not default. Check: Laser_Dust_Sensor_Control_Protocol_V1.3 PDF");
+    static_assert(measurementStabilityMs == 30000U, "Data stability delay is not default. Check: Laser_Dust_Sensor_Control_Protocol_V1.3 PDF");
+    static_assert(dataIntervalMs== 1000U, "Serial data output interval not default. Check: Laser PM2.5 Sensor specification PDF");
+
+    /*Constructor method*/
+    SDS011(gpio_num_t rxPin, gpio_num_t txPin, gpio_num_t loadswitchGpio, uart_port_t uartPort = UART_NUM_1);
+    esp_err_t getMeasurementPoint(uint16_t& PM2_5);
+
+    private:
+    uart_port_t uartPort;
+    uint8_t readBuffer[readBufferByteSize];
+
+    int performDataAcquisition();
+    void performDataProcessing(uint16_t& PM2_5);
+    uint16_t inline conv_int_8_16(uint8_t msb, uint8_t lsb);
+
+    };
+    }
+}
+#endif
