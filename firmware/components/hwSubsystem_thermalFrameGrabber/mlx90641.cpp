@@ -4,6 +4,9 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
+constexpr int externalHardwareSubsystem::thermalImaging::MLX90641::refreshratesTable[];
+constexpr float externalHardwareSubsystem::thermalImaging::MLX90641::resolutionsTable[];
+
 /*Ctor to attach the device to an uninitialized bus object*/
 externalHardwareSubsystem::thermalImaging::MLX90641::MLX90641(SemaphoreHandle_t& i2cBusMutex, uint8_t address, uint32_t timeout): i2cBus(i2cBusMutex), m_address{address}, m_timeoutms{timeout} {}
 
@@ -610,18 +613,16 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::GetRefreshRate()
 }
 
 //------------------------------------------------------------------------------
-
 float externalHardwareSubsystem::thermalImaging::MLX90641::getPrintableRefreshRate()
 {
     int refreshRate = GetRefreshRate();
-    return (refreshRate < 0)? 0. : refreshratesTable[GetRefreshRate()];
+    return (refreshRate < 0)? 0. : refreshratesTable[refreshRate];
 }
-
 //------------------------------------------------------------------------------
-int inline externalHardwareSubsystem::thermalImaging::MLX90641::getPrintableResolution()
+int externalHardwareSubsystem::thermalImaging::MLX90641::getPrintableResolution()
 {
-    int resolution = GetRefreshRate();
-    return (resolution < 0)? 0. : resolutionsTable[GetRefreshRate()];
+    int resolution = GetCurResolution();
+    return (resolution < 0)? -1 : resolutionsTable[resolution];
 }
 
 //------------------------------------------------------------------------------
@@ -756,27 +757,29 @@ void externalHardwareSubsystem::thermalImaging::MLX90641::CalculateTo(uint16_t *
     }
 }
 
-void externalHardwareSubsystem::thermalImaging::MLX90641::getAndPrintImage(float* mlx90641Image)
+float* externalHardwareSubsystem::thermalImaging::MLX90641::getAndPrintImage()
 {
-    GetImage(mlx90641Image);
+    float* frameBuffer = GetImage();
     printf("[[");
     for(int i=0; i<pixelCount; ++i)
     {
         if (i%16 == 0 && i != 0)
         {
-            printf(",],\n[%f,", mlx90641Image[i]);
+            printf(",],\n[%f,", frameBuffer [i]);
         }
         else
         {
-            printf("%f ", mlx90641Image[i]);
+            printf("%f ", frameBuffer[i]);
         }
     }
     printf("]]\n");
+
+    return frameBuffer;
 }
 
 //------------------------------------------------------------------------------
 
-void externalHardwareSubsystem::thermalImaging::MLX90641::GetImage(float *result)
+float* externalHardwareSubsystem::thermalImaging::MLX90641::GetImage()
 {
     uint16_t mlx90641Frame[242] = {0};
     uint16_t eeMLX90641[832] = {0};
@@ -784,7 +787,8 @@ void externalHardwareSubsystem::thermalImaging::MLX90641::GetImage(float *result
     int status = DumpEE(eeMLX90641);
     status = ExtractParameters(eeMLX90641);
     status = GetFrameData(mlx90641Frame);
-    CalculateTo(mlx90641Frame, GetEmissivity(), defaultBaselineTemperature, result);
+    CalculateTo(mlx90641Frame, GetEmissivity(), defaultBaselineTemperature, frameBuffer);
+    return frameBuffer;
 }
 
 //------------------------------------------------------------------------------
@@ -847,7 +851,7 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::GetSubPageNumber(uint16
 }    
 
 //------------------------------------------------------------------------------
-void externalHardwareSubsystem::thermalImaging::MLX90641::BadPixelsCorrection(uint16_t pixel, float *to)
+void externalHardwareSubsystem::thermalImaging::MLX90641::BadPixelsCorrection(uint16_t pixel)
 {   
     float ap[2];
     uint8_t line;
@@ -860,27 +864,27 @@ void externalHardwareSubsystem::thermalImaging::MLX90641::BadPixelsCorrection(ui
                
         if(column == 0)
         {
-            to[pixel] = to[pixel+1];            
+            frameBuffer[pixel] = frameBuffer[pixel+1];            
         }
         else if(column == 1 || column == 14)
         {
-            to[pixel] = (to[pixel-1]+to[pixel+1])/2.0;                
+            frameBuffer[pixel] = (frameBuffer[pixel-1]+frameBuffer[pixel+1])/2.0;                
         } 
         else if(column == 15)
         {
-            to[pixel] = to[pixel-1];
+            frameBuffer[pixel] = frameBuffer[pixel-1];
         } 
         else
         {            
-            ap[0] = to[pixel+1] - to[pixel+2];
-            ap[1] = to[pixel-1] - to[pixel-2];
+            ap[0] = frameBuffer[pixel+1] - frameBuffer[pixel+2];
+            ap[1] = frameBuffer[pixel-1] - frameBuffer[pixel-2];
             if(fabs(ap[0]) > fabs(ap[1]))
             {
-                to[pixel] = to[pixel-1] + ap[1];                        
+                frameBuffer[pixel] = frameBuffer[pixel-1] + ap[1];                        
             }
             else
             {
-                to[pixel] = to[pixel+1] + ap[0];                        
+                frameBuffer[pixel] = frameBuffer[pixel+1] + ap[0];                        
             }
                     
         }                      
