@@ -24,11 +24,11 @@ externalHardwareSubsystem::particulateSensor::SDS011::SDS011(gpio_num_t rxPin, g
     uart_set_pin(uartPort, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 }
 
-esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getMeasurementPoint(uint16_t& PM2_5)
+esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMeasurement(uint16_t& PM2_5)
 {
     const int bytesRead  = performDataAcquisition();
     
-    ESP_LOGI(TAG, "Read %d bytes", bytesRead);
+    ESP_LOGD(TAG, "Read %d bytes", bytesRead);
     if (bytesRead != activeReportingMeasurementLength)
     {
         memset(readBuffer, 0, readBufferByteSize);
@@ -55,7 +55,6 @@ void externalHardwareSubsystem::particulateSensor::SDS011::performDataProcessing
     const uint8_t PM_25_MSB_POSITION{3};
     const uint8_t PM_25_LSB_POSITION{2};
     PM2_5 = conv_int_8_16(readBuffer[PM_25_MSB_POSITION], readBuffer[PM_25_LSB_POSITION]);
-    ESP_LOGI(TAG, "PM 2.5 value: %u μg/m³", PM2_5);
 }
 
 uint16_t inline externalHardwareSubsystem::particulateSensor::SDS011::conv_int_8_16(uint8_t msb, uint8_t lsb)

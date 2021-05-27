@@ -52,7 +52,7 @@ namespace externalHardwareSubsystem
         static constexpr int refreshratesTable[] {16,17,18,19};
     
         /*Constructor methods*/
-        MLX90641(SemaphoreHandle_t& i2cBusMutex, uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
+        MLX90641(uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
         MLX90641(const externalHardwareInterface::i2cBus& otherBusDevice, uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
 
         /*Data acquisition functions*/

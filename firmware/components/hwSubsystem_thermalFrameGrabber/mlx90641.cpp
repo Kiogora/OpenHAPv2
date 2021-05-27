@@ -8,7 +8,7 @@ constexpr int externalHardwareSubsystem::thermalImaging::MLX90641::refreshratesT
 constexpr float externalHardwareSubsystem::thermalImaging::MLX90641::resolutionsTable[];
 
 /*Ctor to attach the device to an uninitialized bus object*/
-externalHardwareSubsystem::thermalImaging::MLX90641::MLX90641(SemaphoreHandle_t& i2cBusMutex, uint8_t address, uint32_t timeout): i2cBus(i2cBusMutex), m_address{address}, m_timeoutms{timeout} {}
+externalHardwareSubsystem::thermalImaging::MLX90641::MLX90641(uint8_t address, uint32_t timeout): m_address{address}, m_timeoutms{timeout} {}
 
 /*Ctor to attach the device to an existing bus object*/
 externalHardwareSubsystem::thermalImaging::MLX90641::MLX90641(const i2cBus& otherBusDevice, uint8_t address, uint32_t timeout): i2cBus(otherBusDevice), m_address{address}, m_timeoutms{timeout} {}
