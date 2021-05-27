@@ -611,6 +611,18 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::GetRefreshRate()
 
 //------------------------------------------------------------------------------
 
+float externalHardwareSubsystem::thermalImaging::MLX90641::getPrintableRefreshRate()
+{
+    return 0.5*(1<<GetRefreshRate());
+}
+
+//------------------------------------------------------------------------------
+int externalHardwareSubsystem::thermalImaging::MLX90641::getPrintableResolution()
+{
+    return 16+GetCurResolution();
+}
+
+//------------------------------------------------------------------------------
 void externalHardwareSubsystem::thermalImaging::MLX90641::CalculateTo(uint16_t *frameData, float emissivity, float tr, float *result) const
 {
     float vdd;

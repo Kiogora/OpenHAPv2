@@ -60,8 +60,11 @@ namespace externalHardwareSubsystem
         int SetResolution(supportedResolutions resolution);
         int GetCurResolution();
         int SetRefreshRate(supportedRefreshRates refreshRate);   
-        int GetRefreshRate();  
+        int GetRefreshRate();
 
+        /*Configuration helper functions for printing*/
+        float getPrintableRefreshRate();
+        int getPrintableResolution();
 
     private:
         static constexpr bool  ACK_CHECK_EN   {0x1};
