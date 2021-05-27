@@ -24,11 +24,13 @@ extern "C" void app_main()
 {
     /*I2C bus mutex to avoid bus contention*/
     SemaphoreHandle_t i2cBusAccessMutex{xSemaphoreCreateMutex()};
-    
+
+    /*Get image size from object definition*/
+    const size_t& imageSize = externalHardwareSubsystem::thermalImaging::MLX90641::pixelCount;
     /*Thermal image buffer*/
-    float thermalImage[externalHardwareSubsystem::thermalImaging::MLX90641::pixelCount] = {0};
+    float thermalImage[imageSize] = {0};
     /*Thermal imager max temperature variable*/
-    float maxThermalTemperature = 0;
+    float maxThermalTemperature = 0.;
     
     /*PM 2.5 measurement variable*/
     uint16_t pollutantConcentration = 0;
@@ -38,7 +40,7 @@ extern "C" void app_main()
     externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager(i2cBusAccessMutex);
 
     thermalImager.getAndPrintImage(thermalImage);
-    maxThermalTemperature = softwareUtilities::stats::findMax(thermalImage, sizeof(thermalImage)/sizeof(thermalImage[0]));
+    maxThermalTemperature = softwareUtilities::stats::findMax(thermalImage, imageSize);
     ESP_LOGI(TAG, "Max thermal temperature: %f°C", maxThermalTemperature);
 
     while (1)
