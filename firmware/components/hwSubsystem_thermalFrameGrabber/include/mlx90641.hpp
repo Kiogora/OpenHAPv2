@@ -64,12 +64,12 @@ namespace externalHardwareSubsystem
 
         struct operatingParams
         {
-        int16_t kVdd;int16_t vdd25;float KvPTAT;float KtPTAT;uint16_t vPTAT25;
-        float alphaPTAT;int16_t gainEE;float tgc;float cpKv;float cpKta;
-        uint8_t resolutionEE;uint8_t calibrationModeEE;float KsTa;float ksTo[8];
-        int16_t ct[8];uint16_t alpha[192];uint8_t alphaScale;int16_t offset[2][192];    
-        int8_t kta[192];uint8_t ktaScale;int8_t kv[192];uint8_t kvScale;float cpAlpha;
-        int16_t cpOffset;float emissivityEE;uint16_t brokenPixel;
+            int16_t kVdd;int16_t vdd25;float KvPTAT;float KtPTAT;uint16_t vPTAT25;
+            float alphaPTAT;int16_t gainEE;float tgc;float cpKv;float cpKta;
+            uint8_t resolutionEE;uint8_t calibrationModeEE;float KsTa;float ksTo[8];
+            int16_t ct[8];uint16_t alpha[192];uint8_t alphaScale;int16_t offset[2][192];    
+            int8_t kta[192];uint8_t ktaScale;int8_t kv[192];uint8_t kvScale;float cpAlpha;
+            int16_t cpOffset;float emissivityEE;uint16_t brokenPixel;
         };
 
         uint8_t m_address;
