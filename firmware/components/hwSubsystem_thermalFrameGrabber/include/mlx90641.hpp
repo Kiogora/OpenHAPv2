@@ -37,7 +37,11 @@ namespace externalHardwareSubsystem
         static constexpr float defaultBaselineTemperature{23.15};
         static constexpr float defaultEmissivity{0.95};
 
-        static constexpr uint8_t pixelCount{192};
+        static constexpr size_t pixelCount{192};
+
+        /*Compile time assertions based on nature of the hardware*/
+        static_assert(factorySetAddress==0x33U, "MLX90641 I2C address not default. Check datasheet");
+        static_assert(pixelCount==192U, "MLX90641 pixel count not default. Check datasheet");
     
         /*Constructor methods*/
         MLX90641(SemaphoreHandle_t& i2cBusMutex, uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
