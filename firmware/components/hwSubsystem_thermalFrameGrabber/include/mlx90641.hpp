@@ -67,10 +67,6 @@ namespace externalHardwareSubsystem
         int getPrintableResolution();
 
     private:
-        static constexpr bool  ACK_CHECK_EN   {0x1};
-        static constexpr bool  ACK_CHECK_DIS  {0x0};
-        static constexpr float SCALEALPHA     {0.000001};
-
         struct operatingParams
         {
             int16_t kVdd;int16_t vdd25;float KvPTAT;float KtPTAT;uint16_t vPTAT25;
@@ -80,6 +76,14 @@ namespace externalHardwareSubsystem
             int8_t kta[192];uint8_t ktaScale;int8_t kv[192];uint8_t kvScale;float cpAlpha;
             int16_t cpOffset;float emissivityEE;uint16_t brokenPixel;
         };
+
+        static constexpr float resolutionsTable[] {0.5,1.,2.,4,8.,16.,32.,64.};
+        static constexpr float refreshratesTable[] {16,17,18,19};
+        
+        static constexpr bool  ACK_CHECK_EN   {0x1};
+        static constexpr bool  ACK_CHECK_DIS  {0x0};
+
+        static constexpr float SCALEALPHA     {0.000001};
 
         uint8_t m_address;
         uint32_t m_timeoutms;

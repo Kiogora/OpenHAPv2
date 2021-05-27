@@ -613,13 +613,15 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::GetRefreshRate()
 
 float externalHardwareSubsystem::thermalImaging::MLX90641::getPrintableRefreshRate()
 {
-    return 0.5*(1<<GetRefreshRate());
+    int refreshRate = GetRefreshRate();
+    return (refreshRate < 0)? 0. : refreshratesTable[GetRefreshRate()];
 }
 
 //------------------------------------------------------------------------------
-int externalHardwareSubsystem::thermalImaging::MLX90641::getPrintableResolution()
+int inline externalHardwareSubsystem::thermalImaging::MLX90641::getPrintableResolution()
 {
-    return 16+GetCurResolution();
+    int resolution = GetRefreshRate();
+    return (resolution < 0)? 0. : resolutionsTable[GetRefreshRate()];
 }
 
 //------------------------------------------------------------------------------
