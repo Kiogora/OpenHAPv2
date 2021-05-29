@@ -1,11 +1,3 @@
-/* Blink Example
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include "esp_log.h"
@@ -13,6 +5,7 @@
 #include "mlx90641.hpp"
 #include "sds011.hpp"
 #include "statistics.hpp"
+#include "spiffs.hpp"
 
 static const char *TAG = "Main";
 
@@ -26,8 +19,9 @@ extern "C" void app_main()
     //externalHardwareInterface::gpio warningLed(GPIO_NUM_18, externalHardwareInterface::gpio::output);
     externalHardwareSubsystem::particulateSensor::SDS011 particulateSensor;
     externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager;
+    softwareSubsystem::filesystems::spiffs internalSpiffsFilesystem;
 
-    ESP_LOGI(TAG, "Thermal imager refresh rate: %f Hz", thermalImager.getPrintableRefreshRate());
+    ESP_LOGI(TAG, "Thermal imager refresh rate: %.1f Hz", thermalImager.getPrintableRefreshRate());
     ESP_LOGI(TAG, "Thermal imager resolution: %d bit", thermalImager.getPrintableResolution());
 
     while (1)
