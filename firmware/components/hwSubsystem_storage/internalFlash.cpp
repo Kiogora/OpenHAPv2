@@ -4,12 +4,14 @@
 #include "esp_log.h"
 #include "esp_spiffs.h"
 #include "internalFlash.hpp"
+#include <fstream>
 
 internalHardwareSubsystem::storage::spiFlashFilesystem::spiFlashFilesystem(std::string mountPoint, size_t maxFiles, bool formatIfMountFails)
+: mountPoint(mountPoint)
 {
     ESP_LOGI(TAG.c_str(), "Initializing SPIFFS");
 
-    fsConfiguration =
+    esp_vfs_spiffs_conf_t fsConfiguration =
     {
     .base_path = mountPoint.c_str(),
     .partition_label = NULL,
@@ -33,13 +35,19 @@ internalHardwareSubsystem::storage::spiFlashFilesystem::spiFlashFilesystem(std::
         }
     }   
 
-    size_t total = 0, used = 0;
-    getBytesAvailable(used, total);
+    printBytesAvailable();
 }
 
 esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::getBytesAvailable(size_t& used, size_t& total)
 {
-    esp_err_t ret = esp_spiffs_info(fsConfiguration.partition_label, &total, &used);
+    esp_err_t ret = esp_spiffs_info(NULL, &total, &used);
+    return ret;
+}
+
+esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::printBytesAvailable()
+{
+    size_t used, total;
+    esp_err_t ret = esp_spiffs_info(NULL, &total, &used);
     if (ret != ESP_OK) 
     {
         ESP_LOGE(TAG.c_str(), "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));

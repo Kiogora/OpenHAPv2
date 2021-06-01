@@ -11,14 +11,13 @@ namespace internalHardwareSubsystem
     class spiFlashFilesystem
     {
     public:
-        std::string TAG = "internalHardwareSubystem::filesystems";
+        const std::string TAG = "internalHardwareSubystem::filesystems";
+
+        const std::string mountPoint;
 
         spiFlashFilesystem(const std::string mountPoint = "/internal", size_t maxFiles = 1, bool formatIfMountFails = true);
-
         esp_err_t getBytesAvailable(size_t& usedBytes, size_t& totalBytes);
-
-    protected:
-        esp_vfs_spiffs_conf_t fsConfiguration;
+        esp_err_t  printBytesAvailable();
     };
     }
 
