@@ -5,7 +5,7 @@
 #include "mlx90641.hpp"
 #include "sds011.hpp"
 #include "statistics.hpp"
-#include "spiffs.hpp"
+#include "internalFlash.hpp"
 
 static const char *TAG = "Main";
 
@@ -19,7 +19,7 @@ extern "C" void app_main()
     //externalHardwareInterface::gpio warningLed(GPIO_NUM_18, externalHardwareInterface::gpio::output);
     externalHardwareSubsystem::particulateSensor::SDS011 particulateSensor;
     externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager;
-    softwareSubsystem::filesystems::spiffs internalSpiffsFilesystem;
+    internalHardwareSubsystem::storage::spiFlashFilesystem internalFilesystem;
 
     ESP_LOGI(TAG, "Thermal imager refresh rate: %.1f Hz", thermalImager.getPrintableRefreshRate());
     ESP_LOGI(TAG, "Thermal imager resolution: %d bit", thermalImager.getPrintableResolution());

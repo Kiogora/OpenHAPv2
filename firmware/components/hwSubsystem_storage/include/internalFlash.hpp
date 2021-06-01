@@ -1,28 +1,24 @@
-#ifndef  SPIFFS_HPP
-#define  SPIFFS_HPP
+#ifndef  INTERNALFLASH_HPP
+#define  INTERNALFLASH_HPP
 
 #include <string>
 #include "esp_spiffs.h"
 
-namespace softwareSubsystem
+namespace internalHardwareSubsystem
 {
-    namespace filesystems
+    namespace storage
     {
-    class spiffs
+    class spiFlashFilesystem
     {
     public:
-        std::string TAG = "softwareSubystem::filesystems";
+        std::string TAG = "internalHardwareSubystem::filesystems";
 
-        /*Add to this enumeration as more memories become supported*/
-        enum struct supportedMemories{internalSPIFlash};
-
-        spiffs(supportedMemories setupOnThisMemory = supportedMemories::internalSPIFlash, const std::string mountPoint = "/internal", size_t maxFiles = 1, bool formatIfMountFails = true);
+        spiFlashFilesystem(const std::string mountPoint = "/internal", size_t maxFiles = 1, bool formatIfMountFails = true);
 
         esp_err_t getBytesAvailable(size_t& usedBytes, size_t& totalBytes);
 
     protected:
         esp_vfs_spiffs_conf_t fsConfiguration;
-        supportedMemories thisMemory;
     };
     }
 
