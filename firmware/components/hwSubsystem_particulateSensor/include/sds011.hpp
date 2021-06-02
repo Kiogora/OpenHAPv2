@@ -10,7 +10,7 @@ namespace externalHardwareSubsystem
     namespace particulateSensor
     {
     /* Class is final and can't be overriden. */
-    class SDS011: public externalHardwareInterface::gpio
+    class SDS011
     {
     public:
     static constexpr uint32_t recommendedQueryDelayMs{3000};
@@ -31,6 +31,8 @@ namespace externalHardwareSubsystem
     /*Constructor method*/
     SDS011(gpio_num_t rxPin = GPIO_NUM_22, gpio_num_t txPin = GPIO_NUM_23, gpio_num_t loadswitchGpio = GPIO_NUM_26, uart_port_t uartPort = UART_NUM_1);
     esp_err_t getParticulateMeasurement(uint16_t& PM2_5);
+
+    externalHardwareInterface::gpio powerState;
 
     private:
     uart_port_t uartPort;

@@ -7,7 +7,7 @@
 #define TAG "externalHardwareSubsystem::particulateSensor"
 
 externalHardwareSubsystem::particulateSensor::SDS011::SDS011(gpio_num_t rxPin, gpio_num_t txPin, gpio_num_t loadswitchGpio, uart_port_t uartPort):
-                                                     gpio(loadswitchGpio, externalHardwareInterface::gpio::output), uartPort(uartPort)
+powerState(GPIO_NUM_26, externalHardwareInterface::gpio::output), uartPort(uartPort)
 {   
     const uart_config_t uart_config = 
     {
@@ -42,11 +42,10 @@ esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMe
 
 int externalHardwareSubsystem::particulateSensor::SDS011::performDataAcquisition()
 {
-    on();
-    vTaskDelay(measurementStabilityMs /portTICK_RATE_MS);
+    vTaskDelay(recommendedQueryDelayMs /portTICK_RATE_MS);
     uart_flush(uartPort);
     int bytesRead = uart_read_bytes(uartPort, readBuffer, readBufferByteSize, dataIntervalMs / portTICK_RATE_MS);
-    off();
+    ESP_LOG_BUFFER_HEXDUMP(TAG, readBuffer, readBufferByteSize, ESP_LOG_INFO);
     return bytesRead;
 }
 
