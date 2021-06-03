@@ -6,7 +6,7 @@
 #include "ds3231.hpp"
 
 
-static const char* TAG = "DS3231";
+static const char* TAG = "externalHardwareSubsystem::timekeeping::DS3231";
 
 /*Ctor to attach the device to an uninitialized bus object*/
 externalHardwareSubsystem::timekeeping::DS3231::DS3231(uint8_t address, uint32_t timeout): m_address{address}, m_timeoutms{timeout} {}
@@ -138,7 +138,7 @@ esp_err_t externalHardwareSubsystem::timekeeping::DS3231::write(const void *out_
     i2c_cmd_link_delete(cmd);
     if (ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Could not write to  ds3231 device at address [0x%02x at %d]: returned %d", m_address, getPort(), ret);
+        ESP_LOGE(TAG, "Could not write to  DS3231 device at address [0x%02x at %d]: returned %d", m_address, getPort(), ret);
     }
 
     return ret; 
