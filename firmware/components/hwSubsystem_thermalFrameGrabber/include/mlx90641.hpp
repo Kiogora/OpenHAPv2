@@ -48,16 +48,16 @@ namespace externalHardwareSubsystem
         enum struct supportedResolutions: uint8_t{_16bit = 0x00,_17bit = 0x01,_18bit = 0x02,_19bit = 0x03};
 
         /*Configurations - getting*/
-        static constexpr float refreshratesTable[] {0.5,1.,2.,4,8.,16.,32.,64.};
-        static constexpr int resolutionsTable[] {16,17,18,19};
+        static constexpr float refreshratesTable[] {0.5, 1., 2., 4, 8., 16., 32., 64.};
+        static constexpr int resolutionsTable[] {16, 17, 18, 19};
     
         /*Constructor methods*/
         MLX90641(uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
         MLX90641(const externalHardwareInterface::i2cBus& otherBusDevice, uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
 
         /*Data acquisition functions*/
-        float* GetImage();
-        float* getAndPrintImage();
+        const float* GetImage();
+        const float* getAndPrintImage();
         void BadPixelsCorrection(uint16_t pixel);
 
         /*Configuration functions*/

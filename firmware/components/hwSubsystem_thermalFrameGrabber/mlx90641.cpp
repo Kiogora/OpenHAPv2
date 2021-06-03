@@ -757,9 +757,9 @@ void externalHardwareSubsystem::thermalImaging::MLX90641::CalculateTo(uint16_t *
     }
 }
 
-float* externalHardwareSubsystem::thermalImaging::MLX90641::getAndPrintImage()
+const float* externalHardwareSubsystem::thermalImaging::MLX90641::getAndPrintImage()
 {
-    float* frameBuffer = GetImage();
+    const float* frameBuffer = GetImage();
     printf("[[");
     for(int i=0; i<pixelCount; ++i)
     {
@@ -779,7 +779,7 @@ float* externalHardwareSubsystem::thermalImaging::MLX90641::getAndPrintImage()
 
 //------------------------------------------------------------------------------
 
-float* externalHardwareSubsystem::thermalImaging::MLX90641::GetImage()
+const float* externalHardwareSubsystem::thermalImaging::MLX90641::GetImage()
 {
     uint16_t mlx90641Frame[242] = {0};
     uint16_t eeMLX90641[832] = {0};
