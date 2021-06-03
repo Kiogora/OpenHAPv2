@@ -4,8 +4,8 @@
 #include "esp_err.h"
 #include "esp_log.h"
 
-constexpr int externalHardwareSubsystem::thermalImaging::MLX90641::refreshratesTable[];
-constexpr float externalHardwareSubsystem::thermalImaging::MLX90641::resolutionsTable[];
+constexpr float externalHardwareSubsystem::thermalImaging::MLX90641::refreshratesTable[];
+constexpr int externalHardwareSubsystem::thermalImaging::MLX90641::resolutionsTable[];
 
 /*Ctor to attach the device to an uninitialized bus object*/
 externalHardwareSubsystem::thermalImaging::MLX90641::MLX90641(uint8_t address, uint32_t timeout): m_address{address}, m_timeoutms{timeout} {}
