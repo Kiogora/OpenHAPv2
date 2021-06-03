@@ -45,7 +45,7 @@ int externalHardwareSubsystem::particulateSensor::SDS011::performDataAcquisition
     vTaskDelay(recommendedQueryDelayMs /portTICK_RATE_MS);
     uart_flush(uartPort);
     int bytesRead = uart_read_bytes(uartPort, readBuffer, readBufferByteSize, dataIntervalMs / portTICK_RATE_MS);
-    ESP_LOG_BUFFER_HEXDUMP(TAG, readBuffer, readBufferByteSize, ESP_LOG_INFO);
+    ESP_LOG_BUFFER_HEXDUMP(TAG, readBuffer, readBufferByteSize, ESP_LOG_DEBUG);
     return bytesRead;
 }
 
