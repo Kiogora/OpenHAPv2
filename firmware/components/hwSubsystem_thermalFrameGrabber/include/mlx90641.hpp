@@ -31,25 +31,13 @@ namespace externalHardwareSubsystem
     class MLX90641 final : public externalHardwareInterface::i2cBus
     {
     public:
-        static constexpr uint8_t factorySetAddress{0x33};
-        static constexpr int busTimeout{1000};
-
-        static constexpr float defaultBaselineTemperature{23.15};
-        static constexpr float defaultEmissivity{0.95};
-
         static constexpr uint8_t pixelCount{192};
-
-        /*Compile time assertions based on nature of the hardware*/
-        static_assert(factorySetAddress==0x33U, "MLX90641 I2C address not default. Check datasheet");
+        /*Compile time assertions for public driver data based on nature of the hardware*/
         static_assert(pixelCount==192U, "MLX90641 pixel count not default. Check datasheet");
 
         /*Configurations - setting*/
         enum struct supportedRefreshRates: uint8_t{_0_5Hz = 0x00,_1Hz = 0x01,_2Hz = 0x02,_4Hz = 0x03,_8Hz = 0x04, _16Hz = 0x05,_32Hz = 0x06, _64Hz = 0x07};
         enum struct supportedResolutions: uint8_t{_16bit = 0x00,_17bit = 0x01,_18bit = 0x02,_19bit = 0x03};
-
-        /*Configurations - getting*/
-        static constexpr float refreshratesTable[] {0.5, 1., 2., 4, 8., 16., 32., 64.};
-        static constexpr int resolutionsTable[] {16, 17, 18, 19};
     
         /*Constructor methods*/
         MLX90641(uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
@@ -81,10 +69,22 @@ namespace externalHardwareSubsystem
             int16_t cpOffset;float emissivityEE;uint16_t brokenPixel;
         };
 
+        static constexpr uint8_t factorySetAddress{0x33};
+        /*Compile time assertions for private driver data based on nature of the hardware*/
+        static_assert(factorySetAddress==0x33U, "MLX90641 I2C address not default. Check datasheet");
+
+        static constexpr int busTimeout{1000};
+
         static constexpr bool  ACK_CHECK_EN   {0x1};
         static constexpr bool  ACK_CHECK_DIS  {0x0};
 
+        static constexpr float defaultBaselineTemperature{23.15};
+        static constexpr float defaultEmissivity{0.95};
         static constexpr float SCALEALPHA     {0.000001};
+
+        /*Configurations - getting*/
+        static constexpr float refreshratesTable[] {0.5, 1., 2., 4, 8., 16., 32., 64.};
+        static constexpr int resolutionsTable[] {16, 17, 18, 19};
 
         uint8_t m_address;
         uint32_t m_timeoutms;
