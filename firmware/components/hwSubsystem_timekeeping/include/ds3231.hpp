@@ -1,0 +1,55 @@
+#ifndef  DS3231_HPP
+#define  DS3231_HPP
+
+
+#include <time.h>
+#include <stdint.h>
+#include <esp_err.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "i2c.hpp"
+
+namespace externalHardwareSubsystem
+{
+    namespace timekeeping
+    {
+    /* Class is final and can't be overriden. May be useful to override where there are derivatives of DS3231*/
+    class DS3231: public externalHardwareInterface::i2cBus
+    {
+    public:
+        /*Default DS3231 I2C address*/
+        static constexpr uint8_t factorySetAddress{0x68};
+        static constexpr int busTimeout{1000};
+
+        DS3231(uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
+        DS3231(const externalHardwareInterface::i2cBus& otherBusDevice, uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
+
+        esp_err_t get_time(struct tm* time);
+        esp_err_t set_time(struct tm *time);
+
+    protected:
+        /*regAddress*/
+        static constexpr uint8_t  reg_time     {0x00};
+        /*flags*/
+        static constexpr uint8_t  flag_12hour  {0x40};
+        static constexpr uint8_t  flag_PM      {0x20};
+        /*masks*/
+        static constexpr uint8_t  mask_12hour  {0x1f};
+        static constexpr uint8_t  mask_month   {0x1f};
+
+        uint8_t dec2bcd(uint8_t val);
+        uint8_t bcd2dec(uint8_t val);
+
+        inline esp_err_t write_reg(uint8_t reg, const void *out_data, size_t out_size);    
+        inline esp_err_t read_reg(uint8_t reg, void *in_data, size_t in_size);
+
+        esp_err_t read(const void *out_data, size_t out_size, void *in_data, size_t in_size);
+        esp_err_t write(const void *out_reg, size_t out_reg_size, const void *out_data, size_t out_size);
+
+    private:
+        uint8_t m_address;
+        uint32_t m_timeoutms;
+    };
+    }
+}
+#endif
