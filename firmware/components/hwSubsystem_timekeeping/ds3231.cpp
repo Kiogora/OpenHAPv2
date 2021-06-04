@@ -102,14 +102,14 @@ esp_err_t externalHardwareSubsystem::timekeeping::DS3231::read(const void *out_d
     i2c_master_write_byte(cmd, m_address << 1 | 1, true);
     i2c_master_read(cmd, (uint8_t*)in_data, in_size, I2C_MASTER_LAST_NACK);
     i2c_master_stop(cmd);
-    xSemaphoreTake(getMutex(), portMAX_DELAY);
-    esp_err_t ret = i2c_master_cmd_begin(getPort(), cmd, busTimeout/portTICK_RATE_MS);
-    xSemaphoreGive(getMutex());
+    xSemaphoreTake(m_busMutex, portMAX_DELAY);
+    esp_err_t ret = i2c_master_cmd_begin(m_portNum, cmd, busTimeout/portTICK_RATE_MS);
+    xSemaphoreGive(m_busMutex);
     i2c_cmd_link_delete(cmd);
 
     if (ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Could not read from ds3231 device at address [0x%02x at %d]: returned %d", m_address, getPort(), ret);
+        ESP_LOGE(TAG, "Could not read from ds3231 device at address [0x%02x at %d]: returned %d", m_address, m_portNum, ret);
     }
 
     return ret;  
@@ -132,13 +132,13 @@ esp_err_t externalHardwareSubsystem::timekeeping::DS3231::write(const void *out_
     }
     i2c_master_write(cmd, (uint8_t *)out_data, out_size, true);
     i2c_master_stop(cmd);
-    xSemaphoreTake(getMutex(), portMAX_DELAY);
-    esp_err_t ret = i2c_master_cmd_begin(getPort(), cmd, m_timeoutms/portTICK_RATE_MS);
-    xSemaphoreGive(getMutex());
+    xSemaphoreTake(m_busMutex, portMAX_DELAY);
+    esp_err_t ret = i2c_master_cmd_begin(m_portNum, cmd, m_timeoutms/portTICK_RATE_MS);
+    xSemaphoreGive(m_busMutex);
     i2c_cmd_link_delete(cmd);
     if (ret != ESP_OK)
     {
-        ESP_LOGE(TAG, "Could not write to  DS3231 device at address [0x%02x at %d]: returned %d", m_address, getPort(), ret);
+        ESP_LOGE(TAG, "Could not write to  DS3231 device at address [0x%02x at %d]: returned %d", m_address, m_portNum, ret);
     }
 
     return ret; 

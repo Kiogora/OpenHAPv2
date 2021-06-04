@@ -28,10 +28,10 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::read(uint16_t startAddr
 
     i2c_cmd_handle_t i2c_cmd = i2c_cmd_link_create();
     i2c_master_start(i2c_cmd);
-    i2c_master_write_byte(i2c_cmd, ( m_address << 1 ) | I2C_MASTER_WRITE, ACK_CHECK_EN);
-    i2c_master_write(i2c_cmd, mlx_cmd, 2, ACK_CHECK_EN);
+    i2c_master_write_byte(i2c_cmd, ( m_address << 1 ) | I2C_MASTER_WRITE, ACK_CHECK_ENABLED);
+    i2c_master_write(i2c_cmd, mlx_cmd, 2, ACK_CHECK_ENABLED);
     i2c_master_start(i2c_cmd);
-    i2c_master_write_byte(i2c_cmd, ( m_address << 1 ) | I2C_MASTER_READ, ACK_CHECK_EN);
+    i2c_master_write_byte(i2c_cmd, ( m_address << 1 ) | I2C_MASTER_READ, ACK_CHECK_ENABLED);
     if ((nMemAddressRead*2) > 1)
     {
         i2c_master_read(i2c_cmd, data_rd, (2*nMemAddressRead)-1, I2C_MASTER_ACK);
@@ -39,9 +39,9 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::read(uint16_t startAddr
 
     i2c_master_read_byte(i2c_cmd, data_rd+((2*nMemAddressRead)-1), I2C_MASTER_LAST_NACK);
     i2c_master_stop(i2c_cmd);
-    xSemaphoreTake(getMutex(), portMAX_DELAY);
-    esp_err_t ret = i2c_master_cmd_begin(getPort(), i2c_cmd, m_timeoutms / portTICK_RATE_MS);
-    xSemaphoreGive(getMutex());
+    xSemaphoreTake(m_busMutex, portMAX_DELAY);
+    esp_err_t ret = i2c_master_cmd_begin(m_portNum, i2c_cmd, m_timeoutms / portTICK_RATE_MS);
+    xSemaphoreGive(m_busMutex);
     i2c_cmd_link_delete(i2c_cmd);
     if (ret != ESP_OK)
     {
@@ -71,12 +71,12 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::write(uint16_t writeAdd
 
     i2c_cmd_handle_t i2c_cmd = i2c_cmd_link_create();
     i2c_master_start(i2c_cmd);
-    i2c_master_write_byte(i2c_cmd, ( m_address << 1 ) | I2C_MASTER_WRITE, ACK_CHECK_EN);
-    i2c_master_write(i2c_cmd, mlx_cmd, 4, ACK_CHECK_EN);
+    i2c_master_write_byte(i2c_cmd, ( m_address << 1 ) | I2C_MASTER_WRITE, ACK_CHECK_ENABLED);
+    i2c_master_write(i2c_cmd, mlx_cmd, 4, ACK_CHECK_ENABLED);
     i2c_master_stop(i2c_cmd);
-    xSemaphoreTake(getMutex(), portMAX_DELAY);
-    esp_err_t ret = i2c_master_cmd_begin(getPort(), i2c_cmd, m_timeoutms / portTICK_RATE_MS);
-    xSemaphoreGive(getMutex());
+    xSemaphoreTake(m_busMutex, portMAX_DELAY);
+    esp_err_t ret = i2c_master_cmd_begin(m_portNum, i2c_cmd, m_timeoutms / portTICK_RATE_MS);
+    xSemaphoreGive(m_busMutex);
     i2c_cmd_link_delete(i2c_cmd);
     if (ret != ESP_OK)
     {
@@ -101,12 +101,12 @@ int externalHardwareSubsystem::thermalImaging::MLX90641::generalReset()
 
     i2c_cmd_handle_t i2c_cmd = i2c_cmd_link_create();
     i2c_master_start(i2c_cmd);
-    i2c_master_write_byte(i2c_cmd, ( m_address << 1 ) | I2C_MASTER_WRITE, ACK_CHECK_EN);
-    i2c_master_write(i2c_cmd, mlx_cmd, 2, ACK_CHECK_EN);
+    i2c_master_write_byte(i2c_cmd, ( m_address << 1 ) | I2C_MASTER_WRITE, ACK_CHECK_ENABLED);
+    i2c_master_write(i2c_cmd, mlx_cmd, 2, ACK_CHECK_ENABLED);
     i2c_master_stop(i2c_cmd);
-    xSemaphoreTake(getMutex(), portMAX_DELAY);
-    esp_err_t ret = i2c_master_cmd_begin(getPort(), i2c_cmd, m_timeoutms / portTICK_RATE_MS);
-    xSemaphoreGive(getMutex());
+    xSemaphoreTake(m_busMutex, portMAX_DELAY);
+    esp_err_t ret = i2c_master_cmd_begin(m_portNum, i2c_cmd, m_timeoutms / portTICK_RATE_MS);
+    xSemaphoreGive(m_busMutex);
     i2c_cmd_link_delete(i2c_cmd);
     if (ret != ESP_OK)
     {

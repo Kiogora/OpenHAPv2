@@ -60,7 +60,7 @@ void externalHardwareInterface::i2cBus::scanBusAddresses()
             address = i + j;
             i2c_cmd_handle_t cmd = i2c_cmd_link_create();
             i2c_master_start(cmd);
-            i2c_master_write_byte(cmd, (address << 1) | I2C_MASTER_WRITE, 1 /* expect ack */);
+            i2c_master_write_byte(cmd, (address << 1) | I2C_MASTER_WRITE, ACK_CHECK_ENABLED);
             i2c_master_stop(cmd);
             esp_err_t ret = i2c_master_cmd_begin(m_portNum, cmd, 50 / portTICK_RATE_MS);
             i2c_cmd_link_delete(cmd);
@@ -85,7 +85,7 @@ bool externalHardwareInterface::i2cBus::isPresent(uint8_t address)
 {
 	i2c_cmd_handle_t cmd = ::i2c_cmd_link_create();
 	i2c_master_start(cmd);
-	i2c_master_write_byte(cmd, (address << 1) | I2C_MASTER_WRITE, 1 /* expect ack */);
+	i2c_master_write_byte(cmd, (address << 1) | I2C_MASTER_WRITE, ACK_CHECK_ENABLED);
 	i2c_master_stop(cmd);
 
 	esp_err_t ret = ::i2c_master_cmd_begin(m_portNum, cmd, 50 / portTICK_PERIOD_MS);

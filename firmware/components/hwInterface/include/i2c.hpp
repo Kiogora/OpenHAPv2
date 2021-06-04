@@ -34,24 +34,14 @@ public:
     void scanBusAddresses();
     bool isPresent(uint8_t address);
 
-
-    SemaphoreHandle_t& getMutex()
-    {
-        return m_busMutex;
-    }
-
-    i2c_port_t getPort()
-    {
-        return m_portNum;
-    }
-
-private:
+protected:
+    static constexpr bool  ACK_CHECK_ENABLED   {0x1};
+    static constexpr bool  ACK_CHECK_DISABLED  {0x0};
 
     const gpio_num_t     m_sdaPin;
     const gpio_num_t	 m_sclPin;
     i2c_port_t	         m_portNum;
     SemaphoreHandle_t   m_busMutex;
-
 };
 }
 

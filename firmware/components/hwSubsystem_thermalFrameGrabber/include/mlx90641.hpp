@@ -28,7 +28,7 @@ namespace externalHardwareSubsystem
     namespace thermalImaging
     {
     /* Class is final and can't be overriden. */
-    class MLX90641 final : public externalHardwareInterface::i2cBus
+    class MLX90641 : public externalHardwareInterface::i2cBus
     {
     public:
         static constexpr uint8_t pixelCount{192};
@@ -74,9 +74,6 @@ namespace externalHardwareSubsystem
         static_assert(factorySetAddress==0x33U, "MLX90641 I2C address not default. Check datasheet");
 
         static constexpr int busTimeout{1000};
-
-        static constexpr bool  ACK_CHECK_EN   {0x1};
-        static constexpr bool  ACK_CHECK_DIS  {0x0};
 
         static constexpr float defaultBaselineTemperature{23.15};
         static constexpr float defaultEmissivity{0.95};

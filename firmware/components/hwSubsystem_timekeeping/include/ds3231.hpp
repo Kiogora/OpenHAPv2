@@ -13,21 +13,23 @@ namespace externalHardwareSubsystem
 {
     namespace timekeeping
     {
-    /* Class is final and can't be overriden. May be useful to override where there are derivatives of DS3231*/
     class DS3231: public externalHardwareInterface::i2cBus
     {
     public:
-        /*Default DS3231 I2C address*/
-        static constexpr uint8_t factorySetAddress{0x68};
-        static constexpr int busTimeout{1000};
-
         DS3231(uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
         DS3231(const externalHardwareInterface::i2cBus& otherBusDevice, uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
 
         esp_err_t get_time(struct tm* time);
-        esp_err_t set_time(struct tm *time);
+        esp_err_t set_time(struct tm* time);
 
     protected:
+        /*Default DS3231 I2C address*/
+        static constexpr uint8_t factorySetAddress{0x68};
+        /*Compile time assertions for private driver data based on nature of the hardware*/
+        static_assert(factorySetAddress==0x68U, "DS3231 I2C address not default. Check datasheet");
+
+        static constexpr int busTimeout{1000};
+
         /*regAddress*/
         static constexpr uint8_t  reg_time     {0x00};
         /*flags*/
