@@ -27,7 +27,6 @@ namespace externalHardwareSubsystem
 {
     namespace thermalImaging
     {
-    /* Class is final and can't be overriden. */
     class MLX90641 : public externalHardwareInterface::i2cBus
     {
     public:
@@ -75,18 +74,20 @@ namespace externalHardwareSubsystem
 
         static constexpr int busTimeout{1000};
 
-        static constexpr float defaultBaselineTemperature{23.15};
-        static constexpr float defaultEmissivity{0.95};
-        static constexpr float SCALEALPHA     {0.000001};
+        static constexpr float defaultBaselineTemperature {23.15};
+        static constexpr float defaultEmissivity          {0.95};
+        static constexpr float SCALEALPHA                 {0.000001};
 
         /*Configurations - getting*/
-        static constexpr float refreshratesTable[] {0.5, 1., 2., 4, 8., 16., 32., 64.};
-        static constexpr int resolutionsTable[] {16, 17, 18, 19};
+        static constexpr float refreshratesTable[]  {0.5, 1., 2., 4, 8., 16., 32., 64.};
+        static constexpr int resolutionsTable[]     {16, 17, 18, 19};
 
         uint8_t m_address;
         uint32_t m_timeoutms;
         operatingParams paramsMLX90641;
         float frameBuffer[pixelCount];
+
+        bool isPresent();
 
         int read(uint16_t startAddress, uint16_t nMemAddressRead, uint16_t *data);
         int write(uint16_t writeAddress, uint16_t data);

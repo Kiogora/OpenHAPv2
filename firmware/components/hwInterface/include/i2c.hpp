@@ -32,7 +32,7 @@ public:
            i2c_port_t portNum = I2C_NUM_0, bool pullupsState = pullupsDisable);
 
     void scanBusAddresses();
-    bool isPresent(uint8_t address);
+    virtual bool isPresent() = 0;
 
 protected:
     static constexpr bool  ACK_CHECK_ENABLED   {0x1};

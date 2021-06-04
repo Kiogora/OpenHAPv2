@@ -14,6 +14,20 @@ externalHardwareSubsystem::timekeeping::DS3231::DS3231(uint8_t address, uint32_t
 /*Ctor to attach the device to an existing bus object*/
 externalHardwareSubsystem::timekeeping::DS3231::DS3231(const i2cBus& otherBusDevice, uint8_t address, uint32_t timeout): i2cBus(otherBusDevice), m_address{address}, m_timeoutms{timeout} {}
 
+
+/*Create concrete class from abstract i2c class -   How to detect presence of this device*/
+bool externalHardwareSubsystem::timekeeping::DS3231::isPresent()
+{
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (m_address << 1) | I2C_MASTER_WRITE, ACK_CHECK_ENABLED);
+    i2c_master_stop(cmd);
+
+    esp_err_t ret = i2c_master_cmd_begin(m_portNum, cmd, 50 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret == ESP_OK;
+}
+
 esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(struct tm* time)
 {
     uint8_t data[7] = {0};

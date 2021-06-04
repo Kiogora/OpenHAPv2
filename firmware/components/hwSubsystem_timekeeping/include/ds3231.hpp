@@ -19,6 +19,8 @@ namespace externalHardwareSubsystem
         DS3231(uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
         DS3231(const externalHardwareInterface::i2cBus& otherBusDevice, uint8_t address=factorySetAddress, uint32_t timeout = busTimeout);
 
+        bool isPresent();
+
         esp_err_t get_time(struct tm* time);
         esp_err_t set_time(struct tm* time);
 

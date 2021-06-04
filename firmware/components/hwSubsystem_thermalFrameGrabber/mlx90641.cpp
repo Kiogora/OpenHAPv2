@@ -13,6 +13,19 @@ externalHardwareSubsystem::thermalImaging::MLX90641::MLX90641(uint8_t address, u
 /*Ctor to attach the device to an existing bus object*/
 externalHardwareSubsystem::thermalImaging::MLX90641::MLX90641(const i2cBus& otherBusDevice, uint8_t address, uint32_t timeout): i2cBus(otherBusDevice), m_address{address}, m_timeoutms{timeout} {}
 
+/*Create concrete class from abstract i2c class -   How to detect presence of this device*/
+bool externalHardwareSubsystem::thermalImaging::MLX90641::isPresent()
+{
+    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
+    i2c_master_start(cmd);
+    i2c_master_write_byte(cmd, (address << 1) | I2C_MASTER_WRITE, ACK_CHECK_ENABLED);
+    i2c_master_stop(cmd);
+
+    esp_err_t ret = i2c_master_cmd_begin(m_portNum, cmd, 50 / portTICK_PERIOD_MS);
+    i2c_cmd_link_delete(cmd);
+    return ret == ESP_OK;
+} 
+
 int externalHardwareSubsystem::thermalImaging::MLX90641::read(uint16_t startAddress, uint16_t nMemAddressRead, uint16_t *data)
 {                          
     int cnt = 0;
