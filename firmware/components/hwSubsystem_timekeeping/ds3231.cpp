@@ -1,5 +1,7 @@
 #include <ctime>
 #include <driver/i2c.h>
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "ds3231.hpp"

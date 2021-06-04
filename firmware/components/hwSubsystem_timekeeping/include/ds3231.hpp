@@ -5,8 +5,6 @@
 #include <ctime>
 #include <stdint.h>
 #include <esp_err.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
 #include "i2c.hpp"
 
 namespace externalHardwareSubsystem

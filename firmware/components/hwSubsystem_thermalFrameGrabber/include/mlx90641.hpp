@@ -18,9 +18,6 @@
  *
  */
 
-
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
 #include "i2c.hpp"
 
 namespace externalHardwareSubsystem
