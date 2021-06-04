@@ -2,7 +2,7 @@
 #define  DS3231_HPP
 
 
-#include <time.h>
+#include <ctime>
 #include <stdint.h>
 #include <esp_err.h>
 #include "freertos/FreeRTOS.h"
@@ -21,8 +21,11 @@ namespace externalHardwareSubsystem
 
         bool isPresent();
 
-        esp_err_t get_time(struct tm* time);
-        esp_err_t set_time(struct tm* time);
+        esp_err_t get_time(std::time_t& unixtime);
+        esp_err_t set_time(const std::time_t& unixtime);
+
+        esp_err_t get_time(std::tm* time);
+        esp_err_t set_time(const std::tm* time);
 
     protected:
         /*Default DS3231 I2C address*/

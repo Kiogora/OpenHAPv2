@@ -1,6 +1,5 @@
-#include <time.h>
+#include <ctime>
 #include <driver/i2c.h>
-#include "ds3231.hpp"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "ds3231.hpp"
@@ -28,7 +27,7 @@ bool externalHardwareSubsystem::timekeeping::DS3231::isPresent()
     return ret == ESP_OK;
 }
 
-esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(struct tm* time)
+esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(std::tm* time)
 {
     uint8_t data[7] = {0};
 
@@ -63,12 +62,18 @@ esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(struct tm* ti
     time->tm_mon  = bcd2dec(data[5] & mask_month) - 1;
     time->tm_year = (bcd2dec(data[6])+2000)-1900;
     time->tm_isdst = 0;
-    // apply a time zone (if you are not using localtime on the rtc or you want to check/apply DST)
-    //applyTZ(time);
     return ESP_OK;
 }
 
-esp_err_t externalHardwareSubsystem::timekeeping::DS3231::set_time(struct tm *time)
+esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(std::time_t& unixtime)
+{
+    std::tm ptimeStruct;
+    esp_err_t ret = get_time(&ptimeStruct);
+    unixtime = std::mktime(&ptimeStruct);
+    return ret;
+}
+
+esp_err_t externalHardwareSubsystem::timekeeping::DS3231::set_time(const struct tm *time)
 {
     uint8_t data[7] = {0};
 
@@ -86,6 +91,11 @@ esp_err_t externalHardwareSubsystem::timekeeping::DS3231::set_time(struct tm *ti
     esp_err_t ret = write_reg(reg_time, data, 7);
 
     return ret;
+}
+
+esp_err_t externalHardwareSubsystem::timekeeping::DS3231::set_time(const std::time_t& unixtime)
+{
+    return set_time(std::gmtime(&unixtime));
 }
 
 uint8_t externalHardwareSubsystem::timekeeping::DS3231::bcd2dec(uint8_t val)
