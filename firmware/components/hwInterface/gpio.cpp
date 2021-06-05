@@ -21,24 +21,16 @@ externalHardwareInterface::gpio::gpio(gpio_num_t pin, gpioDirection direction, b
 
 	if(direction == output)
 	{
-		gpio_set_direction(pin, GPIO_MODE_OUTPUT);
+		gpio_set_direction(pin, GPIO_MODE_INPUT_OUTPUT);
 	}
 }
 
-bool externalHardwareInterface::gpio::read()
+bool externalHardwareInterface::gpio::read() const
 {
-	if(m_direction == output)
-	{
-		ESP_LOGE(TAG, "Pins is not configured for input (or input and output");
-	}
-
-	bool val;
 	return inverted? gpio_get_level(m_pin) == 0 : gpio_get_level(m_pin) == 1;
 }
 
-
-
-esp_err_t externalHardwareInterface::gpio::write(bool value)
+esp_err_t externalHardwareInterface::gpio::write(bool value) const
 {
 	esp_err_t err = inverted? gpio_set_level(m_pin, value ? 0 : 1): gpio_set_level(m_pin, value ? 1: 0);
 	if (err != ESP_OK)
@@ -49,17 +41,17 @@ esp_err_t externalHardwareInterface::gpio::write(bool value)
 	return ESP_OK;
 }
 
-esp_err_t externalHardwareInterface::gpio::on()
+esp_err_t externalHardwareInterface::gpio::on() const
 {
 	return externalHardwareInterface::gpio::write(true);
 }
 
-esp_err_t externalHardwareInterface::gpio::off()
+esp_err_t externalHardwareInterface::gpio::off() const
 {
 	return externalHardwareInterface::gpio::write(false);
 }
 
-const gpio_num_t& externalHardwareInterface::gpio::getPin()
+gpio_num_t externalHardwareInterface::gpio::getPin() const
 {
 	return m_pin;
 }

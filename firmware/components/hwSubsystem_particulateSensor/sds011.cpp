@@ -26,6 +26,11 @@ powerState(GPIO_NUM_26, externalHardwareInterface::gpio::output), uartPort(uartP
 
 esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMeasurement(uint16_t& PM2_5)
 {
+    if (powerState.read() == powerState.inactive)
+    {
+        ESP_LOGE(TAG, "SDS011 sensor not activated!");
+        return ESP_ERR_INVALID_STATE;
+    }
     const int bytesRead  = performDataAcquisition();
     
     ESP_LOGD(TAG, "Read %d bytes", bytesRead);

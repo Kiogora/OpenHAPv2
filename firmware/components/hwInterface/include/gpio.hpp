@@ -14,13 +14,6 @@
 
 namespace externalHardwareInterface
 {
-enum class gpioDirection
-{
-	input,
-	output
-};
-
-
 /**
  * @brief Interface to %GPIO functions.
  *
@@ -44,19 +37,28 @@ enum class gpioDirection
 class gpio
 {
 public:
+	enum class gpioDirection
+	{
+		input,
+		output
+	};
+
 	static constexpr gpioDirection input{gpioDirection::input};
 	static constexpr gpioDirection output{gpioDirection::output};
+	static constexpr bool active{true};
+	static constexpr bool inactive{false};
 
 	gpio(gpio_num_t pin, gpioDirection direction, bool inverted = false);
 
-	bool read();
-	esp_err_t write(bool value);
+	bool read() const;
+	esp_err_t write(bool value) const;
 
-	esp_err_t on();
-	esp_err_t off();
-	const gpio_num_t& getPin();
+	esp_err_t on() const;
+	esp_err_t off() const;
+
+	gpio_num_t getPin() const;
 private:
-	const gpio_num_t m_pin;
+	gpio_num_t m_pin;
 	gpioDirection m_direction;
 	bool inverted;
 };
