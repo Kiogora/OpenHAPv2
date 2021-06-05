@@ -6,7 +6,6 @@
 #include "gpio.hpp"
 #include "mlx90641.hpp"
 #include "sds011.hpp"
-#include "statistics.hpp"
 #include "internalFlash.hpp"
 #include "ds3231.hpp"
 
