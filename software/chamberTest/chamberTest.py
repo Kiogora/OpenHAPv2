@@ -3,38 +3,47 @@
 """
 Created on Wed Jun  2 15:46:04 2021
 
-@author: badass
+@author: Alois Mbutura
 """
 
-import time
 import csv
+import time
 import datetime
 import paho.mqtt.client as mqtt
 
 broker_address = "127.0.0.1"
 
 def on_connect(client, userdata, flags, rc):
-    if rc==0:
+    if rc == 0:
         connected_flag=True #set flag
         print("Connected OK Returned code=",rc)
         client.subscribe("$SYS/broker/clients/#")
         client.subscribe("command")
-        client.subscribe("/measurement/#")
-        
-def on_disconnect(client, userdata, rc):
-    print("Disconnected")
-    connected_flag=False #set flag
-    controller.loop_stop()
+        client.subscribe("measurement/#")
     
-def on_subscribe(client, userdata, mid, granted_qos):
-    #print("Subscription to topic successful")       
+def on_subscribe(client, userdata, mid, granted_qos):       
     pass
 
 def on_message(client, userdata, message):
     if message.topic == "command":
-        print("Command loopback ok")
+        print("Measurement command sent!")
     if "measurement" in message.topic:
-        print("Received measurement")
+            mqtt_topic_levels = message.topic.split('/')
+            if len(mqtt_topic_levels) != 2:
+                print("Improperly formatted measurement topic received")
+            else:
+                measurement_time = datetime.datetime.now()
+                device = mqtt_topic_levels[1]
+                value = int(message.payload)
+                
+                print("Measurement received: "
+                     f"Device {device} "
+                     f"at {measurement_time}\n")
+                
+                writer.writerow({'Time': measurement_time,
+                                 'Device': device,
+                                 'measurement':value})
+                
         
 if __name__=="__main__":
     controller = mqtt.Client("controller",clean_session=True)
@@ -46,6 +55,7 @@ if __name__=="__main__":
     controller.connect(broker_address)
     controller.loop_start()
     
+    #Open CSV file for writing in overwrite mode
     with open("chamberTest.csv", 'w') as measurement_file:
         print("CSV file opened")
         fieldnames = ['Time', 'Device', 'measurement']
@@ -59,5 +69,7 @@ if __name__=="__main__":
             except KeyboardInterrupt:
                 controller.loop_stop()
                 controller.disconnect()
+                measurement_file.close()
                 print("CSV file closed and event loop thread stopped")
                 break
+    print("End of program")
