@@ -31,7 +31,7 @@ m_sdaPin(sdaPin), m_sclPin(sclPin), m_portNum(portNum)
     conf.sda_pullup_en    = (pullupsState == pullupsEnable) ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
     conf.scl_pullup_en    = (pullupsState == pullupsDisable) ? GPIO_PULLUP_ENABLE : GPIO_PULLUP_DISABLE;
     conf.master.clk_speed = clockSpeed;
-    //conf.clk_flags        = 0; /*Choose a clock only according to desired frequencies*/
+    conf.clk_flags        = 0; /*Choose a clock only according to desired frequencies*/
     esp_err_t err = i2c_param_config(m_portNum, &conf);
     if (err != ESP_OK)
     {
