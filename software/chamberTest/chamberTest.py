@@ -38,7 +38,8 @@ def on_message(client, userdata, message):
                 
                 print("Measurement received: "
                      f"Device {device} "
-                     f"at {measurement_time}\n")
+                     f"at {measurement_time} "
+                     f"value {value}\n")
                 
                 writer.writerow({'Time': measurement_time,
                                  'Device': device,
