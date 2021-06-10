@@ -9,7 +9,8 @@
 #include "internalFlash.hpp"
 #include "ds3231.hpp"
 
-static const char *TAG = "Main";
+static const char *TEST_TAG = "TEST";
+static const char *RESULT_TAG = "RESULT";
 
 extern "C" void app_main()
 {
@@ -24,47 +25,47 @@ extern "C" void app_main()
     externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager;
     externalHardwareSubsystem::timekeeping::DS3231 ds3231(thermalImager);
 
-    ESP_LOGI(TAG, "*****Warning LED test - observation*****");
-    bool warningLedState = false;
-    int count = 0;
-    while(count < 10)
+    ESP_LOGI(TEST_TAG, "WARNING LED - OBSERVE\n");
+
+    for(int count = 0, max = 10; count < max; ++count)
     {
-        warningLed.write(warningLedState);
-        warningLedState = !warningLedState;
+        ESP_LOGI(RESULT_TAG, "warning LED state %d of %d", count, max);
+        warningLed.toggle();
         vTaskDelay(1000/portTICK_RATE_MS);
-        ++count;
     }
 
-    ESP_LOGI(TAG, "*****I2C bus devices detection test*****");
+    ESP_LOGI(TEST_TAG, "I2C BUS DEVICE DETECTION\n");
+
     thermalImager.scanBusAddresses();
 
-    ESP_LOGI(TAG, "*****RTC test*****");
+    ESP_LOGI(TEST_TAG, "EXTERNAL RTC\n");
+    
     std::time_t unixtime_now = 1555425481;
-
     while (ds3231.set_time(unixtime_now) != ESP_OK)
     {
-        ESP_LOGI(TAG, "Could not set time\n");
+        ESP_LOGI(RESULT_TAG, "Could not set time\n");
         vTaskDelay(250 / portTICK_PERIOD_MS);
     }
-    ESP_LOGI(TAG, "Set time to: UTC %s", std::ctime(&unixtime_now));
-
+    ESP_LOGI(RESULT_TAG, "Set time to: UTC %s", std::ctime(&unixtime_now));
     while (ds3231.get_time(unixtime_now) != ESP_OK)
     {
-        ESP_LOGE(TAG, "Could not get time");
+        ESP_LOGE(RESULT_TAG, "Could not get time\n");
     }
-    ESP_LOGI(TAG, "Time obtained is: UTC %s", std::ctime(&unixtime_now));
+    ESP_LOGI(RESULT_TAG, "Time obtained is: UTC %s", std::ctime(&unixtime_now));
 
-    ESP_LOGI(TAG, "*****Thermopile sensor test*****");
+    ESP_LOGI(TEST_TAG, "THERMOPILE SENSOR\n");
+
     const float* imageBuffer = thermalImager.GetImage();
     maxThermalTemperature = *std::max_element(imageBuffer, imageBuffer+thermalImager.pixelCount);
-    ESP_LOGI(TAG, "Max thermopile sensor array pixel temperature: %f°C", maxThermalTemperature);
+    ESP_LOGI(RESULT_TAG, "Max thermopile sensor array pixel temperature: %f°C\n", maxThermalTemperature);
 
-    ESP_LOGI(TAG, "*****Particulate sensor and loadswitch LED test*****");
+    ESP_LOGI(TEST_TAG, "PARTICULATE SENSOR AND LOADSWITCH\n");
+    
     particulateSensor.powerState.on();
     particulateSensor.getParticulateMeasurement(pollutantConcentration);
-    ESP_LOGI(TAG, "PM 2.5 value: %u μg/m³", pollutantConcentration);
+    ESP_LOGI(RESULT_TAG, "PM 2.5 value: %u μg/m³\n", pollutantConcentration);
     particulateSensor.powerState.off();
-    ESP_LOGI(TAG, "End of test!");
+    ESP_LOGI(RESULT_TAG, "End of test!\n");
     while (1)
     {
         vTaskDelay(1000/portTICK_RATE_MS);

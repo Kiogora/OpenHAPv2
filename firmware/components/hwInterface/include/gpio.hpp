@@ -40,11 +40,14 @@ public:
 	enum class gpioDirection
 	{
 		input,
-		output
+		output,
+		inout
 	};
 
 	static constexpr gpioDirection input{gpioDirection::input};
 	static constexpr gpioDirection output{gpioDirection::output};
+	static constexpr gpioDirection inout{gpioDirection::inout};
+
 	static constexpr bool active{true};
 	static constexpr bool inactive{false};
 
@@ -55,6 +58,7 @@ public:
 
 	esp_err_t on() const;
 	esp_err_t off() const;
+	esp_err_t toggle() const;
 
 	gpio_num_t getPin() const;
 private:

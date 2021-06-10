@@ -43,12 +43,17 @@ esp_err_t externalHardwareInterface::gpio::write(bool value) const
 
 esp_err_t externalHardwareInterface::gpio::on() const
 {
-	return externalHardwareInterface::gpio::write(true);
+	return write(true);
 }
 
 esp_err_t externalHardwareInterface::gpio::off() const
 {
-	return externalHardwareInterface::gpio::write(false);
+	return write(false);
+}
+
+esp_err_t externalHardwareInterface::gpio::toggle() const
+{
+	return write(!read());
 }
 
 gpio_num_t externalHardwareInterface::gpio::getPin() const
