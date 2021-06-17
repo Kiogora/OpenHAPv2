@@ -29,7 +29,7 @@ bool externalHardwareSubsystem::timekeeping::DS3231::isPresent()
     return ret == ESP_OK;
 }
 
-esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(std::tm* time)
+esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(std::tm& time)
 {
     uint8_t data[7] = {0};
 
@@ -41,54 +41,54 @@ esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(std::tm* time
     }
 
     /* convert to unix time structure */
-    time->tm_sec = bcd2dec(data[0]);
-    time->tm_min = bcd2dec(data[1]);
+    time.tm_sec = bcd2dec(data[0]);
+    time.tm_min = bcd2dec(data[1]);
     if (data[2] & flag_12hour)
     {
         /* 12H */
-        time->tm_hour = bcd2dec(data[2] & mask_12hour) - 1;
+        time.tm_hour = bcd2dec(data[2] & mask_12hour) - 1;
 
         /* AM/PM? */
         if (data[2] & flag_PM)
         {
-            time->tm_hour += 12;
+            time.tm_hour += 12;
         }
     }
     else
     {
-        time->tm_hour = bcd2dec(data[2]); /* 24H */
+        time.tm_hour = bcd2dec(data[2]); /* 24H */
     }
 
-    time->tm_wday = bcd2dec(data[3]) - 1;
-    time->tm_mday = bcd2dec(data[4]);
-    time->tm_mon  = bcd2dec(data[5] & mask_month) - 1;
-    time->tm_year = (bcd2dec(data[6])+rtcEpoch)-1900;
-    time->tm_isdst = 0;
+    time.tm_wday = bcd2dec(data[3]) - 1;
+    time.tm_mday = bcd2dec(data[4]);
+    time.tm_mon  = bcd2dec(data[5] & mask_month) - 1;
+    time.tm_year = (bcd2dec(data[6])+rtcEpoch)-1900;
+    time.tm_isdst = 0;
     return ESP_OK;
 }
 
 esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(std::time_t& unixtime)
 {
-    std::tm ptimeStruct;
-    esp_err_t ret = get_time(&ptimeStruct);
-    unixtime = std::mktime(&ptimeStruct);
+    std::tm timeStruct;
+    esp_err_t ret = get_time(timeStruct);
+    unixtime = std::mktime(&timeStruct);
     return ret;
 }
 
-esp_err_t externalHardwareSubsystem::timekeeping::DS3231::set_time(const struct tm *time)
+esp_err_t externalHardwareSubsystem::timekeeping::DS3231::set_time(const std::tm& time)
 {
     uint8_t data[7] = {0};
 
     /* time/date data */
-    data[0] = dec2bcd(time->tm_sec);
-    data[1] = dec2bcd(time->tm_min);
-    data[2] = dec2bcd(time->tm_hour);
+    data[0] = dec2bcd(time.tm_sec);
+    data[1] = dec2bcd(time.tm_min);
+    data[2] = dec2bcd(time.tm_hour);
     /* The week data must be in the range 1 to 7, and to keep the start on the
      * same day as for tm_wday have it start at 1 on Sunday. */
-    data[3] = dec2bcd(time->tm_wday + 1);
-    data[4] = dec2bcd(time->tm_mday);
-    data[5] = dec2bcd(time->tm_mon + 1);
-    data[6] = dec2bcd((time->tm_year+1900)-rtcEpoch);
+    data[3] = dec2bcd(time.tm_wday + 1);
+    data[4] = dec2bcd(time.tm_mday);
+    data[5] = dec2bcd(time.tm_mon + 1);
+    data[6] = dec2bcd((time.tm_year+1900)-rtcEpoch);
 
     esp_err_t ret = write_reg(reg_time, data, 7);
 
@@ -97,7 +97,7 @@ esp_err_t externalHardwareSubsystem::timekeeping::DS3231::set_time(const struct 
 
 esp_err_t externalHardwareSubsystem::timekeeping::DS3231::set_time(const std::time_t& unixtime)
 {
-    return set_time(std::gmtime(&unixtime));
+    return set_time(*std::gmtime(&unixtime));
 }
 
 uint8_t externalHardwareSubsystem::timekeeping::DS3231::bcd2dec(uint8_t val)
