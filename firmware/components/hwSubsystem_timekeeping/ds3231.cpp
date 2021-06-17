@@ -62,7 +62,7 @@ esp_err_t externalHardwareSubsystem::timekeeping::DS3231::get_time(std::tm* time
     time->tm_wday = bcd2dec(data[3]) - 1;
     time->tm_mday = bcd2dec(data[4]);
     time->tm_mon  = bcd2dec(data[5] & mask_month) - 1;
-    time->tm_year = (bcd2dec(data[6])+2000)-1900;
+    time->tm_year = (bcd2dec(data[6])+rtcEpoch)-1900;
     time->tm_isdst = 0;
     return ESP_OK;
 }
@@ -88,7 +88,7 @@ esp_err_t externalHardwareSubsystem::timekeeping::DS3231::set_time(const struct 
     data[3] = dec2bcd(time->tm_wday + 1);
     data[4] = dec2bcd(time->tm_mday);
     data[5] = dec2bcd(time->tm_mon + 1);
-    data[6] = dec2bcd((time->tm_year+1900)-2000);
+    data[6] = dec2bcd((time->tm_year+1900)-rtcEpoch);
 
     esp_err_t ret = write_reg(reg_time, data, 7);
 

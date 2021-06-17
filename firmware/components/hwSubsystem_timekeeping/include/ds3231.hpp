@@ -42,6 +42,8 @@ namespace externalHardwareSubsystem
         static constexpr uint8_t  mask_12hour  {0x1f};
         static constexpr uint8_t  mask_month   {0x1f};
 
+        static constexpr int rtcEpoch{2000};
+
         uint8_t dec2bcd(uint8_t val);
         uint8_t bcd2dec(uint8_t val);
 
