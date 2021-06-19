@@ -21,83 +21,103 @@
 #include "esp_log.h"
 #include "mqtt_client.h"
 
+#include "ds3231.hpp"
 #include "sds011.hpp"
 #include "gpio.hpp"
+#include <ctime>
+#include "time.hpp"
 #include <string>
 
 static const char *TAG = "chamberTest";
 
 uint8_t base_mac_addr[6] = {0};
 char macStr[18];
+
+std::tm timeinfo;
+std::time_t now;
+
 externalHardwareSubsystem::particulateSensor::SDS011 particulateSensor;
+externalHardwareSubsystem::timekeeping::DS3231 rtc;
 externalHardwareInterface::gpio warningLed(GPIO_NUM_18, externalHardwareInterface::gpio::output);
 uint16_t pollutantConcentration;
+
+TaskHandle_t xMeasurementTaskHandle = NULL;
+BaseType_t xHigherPriorityTaskWoken;
+esp_mqtt_client_handle_t client;
 
 
 static void log_error_if_nonzero(const char *message, int error_code)
 {
-    if (error_code != 0) {
+    if (error_code != 0)
+    {
         ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
     }
 }
 
-/*
- * @brief Event handler registered to receive MQTT events
- *
- *  This function is called by the MQTT client event loop.
- *
- * @param handler_args user data registered to the event.
- * @param base Event base for the handler(always MQTT Base in this example).
- * @param event_id The id for the received event.
- * @param event_data The data for the event, esp_mqtt_event_handle_t.
- */
+extern "C" void particulate_measurement_task(void *arg)
+{
+    static uint32_t thread_notification;
+    while(1)
+    {
+        thread_notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        if(thread_notification)
+        {
+            warningLed.write(warningLed.active);
+            rtc.get_time(timeinfo);
+            now = std::mktime(&timeinfo);
+            particulateSensor.getParticulateMeasurement(pollutantConcentration);
+            int msg_id = esp_mqtt_client_publish(client, (std::string("measurement/")+std::string(macStr)).c_str(), (std::to_string(pollutantConcentration)+","+std::to_string(now)).c_str(), 0, 2, 0);
+            ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
+            warningLed.write(warningLed.inactive);
+        }
+    }
+}
+
 extern "C" void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data)
 {
     ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
     esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
     esp_mqtt_client_handle_t client = event->client;
     int msg_id;
-    switch ((esp_mqtt_event_id_t)event_id) {
-    case MQTT_EVENT_CONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
-        msg_id = esp_mqtt_client_subscribe(client, "command", 0);
-        ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+    switch ((esp_mqtt_event_id_t)event_id)
+    {
+        case MQTT_EVENT_CONNECTED:
+            ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
+            msg_id = esp_mqtt_client_subscribe(client, "command", 0);
+            ESP_LOGI(TAG, "sent subscribe successful, msg_id=%d", msg_id);
+            break;
+        case MQTT_EVENT_DISCONNECTED:
+            ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
+            break;
 
-        break;
-    case MQTT_EVENT_DISCONNECTED:
-        ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
-        break;
+        case MQTT_EVENT_SUBSCRIBED:
+            ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_UNSUBSCRIBED:
+            ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_PUBLISHED:
+            ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_DATA:
+            ESP_LOGI(TAG, "MQTT_EVENT_DATA");
+            xHigherPriorityTaskWoken = pdFALSE;
+            vTaskNotifyGiveFromISR(xMeasurementTaskHandle, &xHigherPriorityTaskWoken);
+            break;
+        case MQTT_EVENT_ERROR:
+            ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
+            if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
+                log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
+                log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
+                log_error_if_nonzero("captured as transport's socket errno",  event->error_handle->esp_transport_sock_errno);
+                ESP_LOGI(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
 
-    case MQTT_EVENT_SUBSCRIBED:
-        ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_UNSUBSCRIBED:
-        ESP_LOGI(TAG, "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_PUBLISHED:
-        ESP_LOGI(TAG, "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
-        break;
-    case MQTT_EVENT_DATA:
-        ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-        warningLed.write(warningLed.active);
-        particulateSensor.getParticulateMeasurement(pollutantConcentration);
-        msg_id = esp_mqtt_client_publish(client, (std::string("measurement/")+std::string(macStr)).c_str(), std::to_string(pollutantConcentration).c_str(), 0, 1, 0);
-        warningLed.write(warningLed.inactive);
-        ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
-        break;
-    case MQTT_EVENT_ERROR:
-        ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
-        if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
-            log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
-            log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
-            log_error_if_nonzero("captured as transport's socket errno",  event->error_handle->esp_transport_sock_errno);
-            ESP_LOGI(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
-
-        }
-        break;
-    default:
-        ESP_LOGI(TAG, "Other event id:%d", event->event_id);
-        break;
+            }
+            break;
+        default:
+            ESP_LOGI(TAG, "Other event id:%d", event->event_id);
+            break;
     }
 }
 
@@ -105,10 +125,11 @@ extern "C" void mqtt_app_start(void)
 {
     esp_mqtt_client_config_t mqtt_cfg = 
     {
-        .uri = "mqtt://192.168.0.104"
+        .uri = "mqtt://192.168.0.104",
+        .keepalive = 2,
     };
 
-    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    client = esp_mqtt_client_init(&mqtt_cfg);
     /* The last argument may be used to pass data to the event handler, in this example mqtt_event_handler */
     esp_mqtt_client_register_event(client, MQTT_EVENT_ANY, mqtt_event_handler, NULL);
     esp_mqtt_client_start(client);
@@ -157,5 +178,25 @@ extern "C" void app_main(void)
      */
     ESP_ERROR_CHECK(example_connect());
 
+    rtc.get_time(timeinfo);
+    now = std::mktime(&timeinfo);
+    ESP_LOGI(TAG, "RTC Time is UTC %s", std::ctime(&now));
+
+    if(systemUtils::isSystemTimeInvalid())
+    {
+        ESP_LOGI(TAG, "System time is invalid");
+        systemUtils::obtainSystemTimeFromSntp(timeinfo);
+        std::time_t now = std::mktime(&timeinfo);
+        ESP_LOGI(TAG, "Time is UTC %s", std::ctime(&now));
+    }
+    rtc.set_time(timeinfo);
+    ESP_LOGI(TAG, "Updated RTC time and sleeping for 2 seconds");
+    vTaskDelay(2000/portTICK_RATE_MS);
+    rtc.get_time(timeinfo);
+    now = std::mktime(&timeinfo);
+    ESP_LOGI(TAG, "Time is UTC %s", std::ctime(&now));
+
+
+    xTaskCreate(particulate_measurement_task, "measurement task", 8*1024, NULL, 2, &xMeasurementTaskHandle);
     mqtt_app_start();
 }
