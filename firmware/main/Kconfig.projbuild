@@ -1,46 +1,36 @@
-menu "Example Configuration"
+menu "OpenHAP firmware configuration"
 
-    choice BLINK_LED
-        prompt "Blink LED type"
-        default BLINK_LED_RMT if IDF_TARGET_ESP32C3
-        default BLINK_LED_RMT if IDF_TARGET_ESP32S2
-        default BLINK_LED_GPIO
-        help
-            Defines the default peripheral for blink example
+    menu "Hardware validation settings"
 
-        config BLINK_LED_GPIO
-            bool "GPIO"
-        config BLINK_LED_RMT
-            bool "RMT - Addressable LED"
-    endchoice
+        config ENABLE_USER_LED_TEST_HARDWARE_VALIDATION
+            bool "Test user LED"
+            default y
+        config ENABLE_VISUALIZE_I2C_BUS_HARDWARE_VALIDATION
+            bool "Visualize devices present on I2C bus"
+            default y
+        config ENABLE_RTC_TEST_HARDWARE_VALIDATION
+            bool "Test onboard RTC"
+            default y
+        choice
+            
+            prompt "Choose RTC test mode"
+            depends on ENABLE_RTC_TEST_HARDWARE_VALIDATION
+            config ENABLE_SNTP_RTC_TEST_HARDWARE_VALIDATION
+                bool "Test onboard real time clock using SNTP time over WIFI"
+            config ENABLE_STATIC_RTC_TEST_HARDWARE_VALIDATION
+                bool "Test onboard real time clock using static time"
 
-    config BLINK_LED_RMT_CHANNEL
-        depends on BLINK_LED_RMT
-        int "RMT Channel"
-        range 0 7
-        default 0
-        help
-            Set the RMT peripheral channel.
-            ESP32 RMT channel from 0 to 7
-            ESP32-S2 RMT channel from 0 to 3
-            ESP32-C3 RMT channel from 0 to 1
+        endchoice
+        config ENABLE_THERMAL_IMAGER_TEST_HARDWARE_VALIDATION
+            bool "Test onboard thermal image sensor"
+            default y
+        config ENABLE_PM_SENSOR_TEST_HARDWARE_VALIDATION
+            bool "Test onboard particulate sensor"
+            default y
+        config ENABLE_DEFAULT_MAC_ADDRESS_RETRIEVAL_HARDWARE_VALIDATION
+            bool "Retrieve OpenHAP MAC address"
+            default y
 
-    config BLINK_GPIO
-        int "Blink GPIO number"
-        range 0 34
-        default 8 if IDF_TARGET_ESP32C3
-        default 18 if IDF_TARGET_ESP32S2
-        default 5
-        help
-            GPIO number (IOxx) to blink on and off or the RMT signal for the addressable LED.
-            Some GPIOs are used for other purposes (flash connections, etc.) and cannot be used to blink.
-            GPIOs 35-39 are input-only so cannot be used as outputs.
-
-    config BLINK_PERIOD
-        int "Blink period in ms"
-        range 10 3600000
-        default 1000
-        help
-            Define the blinking period in milliseconds.
+    endmenu
 
 endmenu
