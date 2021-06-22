@@ -39,7 +39,7 @@ std::time_t now;
 externalHardwareSubsystem::particulateSensor::SDS011 particulateSensor;
 externalHardwareSubsystem::timekeeping::DS3231 rtc;
 externalHardwareInterface::gpio warningLed(GPIO_NUM_18, externalHardwareInterface::gpio::output);
-uint16_t pollutantConcentration;
+float pollutantConcentration;
 
 TaskHandle_t xMeasurementTaskHandle = NULL;
 BaseType_t xHigherPriorityTaskWoken;
@@ -57,6 +57,7 @@ static void log_error_if_nonzero(const char *message, int error_code)
 extern "C" void particulate_measurement_task(void *arg)
 {
     static uint32_t thread_notification;
+    const uint8_t numPacketsToAverage = 3;
     while(1)
     {
         thread_notification = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -66,7 +67,7 @@ extern "C" void particulate_measurement_task(void *arg)
             warningLed.write(warningLed.active);
             rtc.get_time(timeinfo);
             now = std::mktime(&timeinfo);
-            particulateSensor.getParticulateMeasurement(pollutantConcentration);
+            particulateSensor.getParticulateMeasurement(pollutantConcentration, numPacketsToAverage);
             int msg_id = esp_mqtt_client_publish(client, (std::string("measurement/")+std::string(macStr)).c_str(), (std::to_string(pollutantConcentration)+","+std::to_string(now)).c_str(), 0, 2, 0);
             ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
             warningLed.write(warningLed.inactive);
@@ -125,7 +126,7 @@ extern "C" void mqtt_app_start(void)
 {
     esp_mqtt_client_config_t mqtt_cfg = 
     {
-        .uri = "mqtt://192.168.0.104",
+        .uri = "mqtt://192.168.3.107",
         .keepalive = 2,
     };
 
@@ -177,25 +178,6 @@ extern "C" void app_main(void)
      * examples/protocols/README.md for more information about this function.
      */
     ESP_ERROR_CHECK(example_connect());
-
-    rtc.get_time(timeinfo);
-    now = std::mktime(&timeinfo);
-    ESP_LOGI(TAG, "RTC Time is UTC %s", std::ctime(&now));
-
-    if(systemUtils::isSystemTimeInvalid())
-    {
-        ESP_LOGI(TAG, "System time is invalid");
-        systemUtils::obtainSystemTimeFromSntp(timeinfo);
-        std::time_t now = std::mktime(&timeinfo);
-        ESP_LOGI(TAG, "Time is UTC %s", std::ctime(&now));
-    }
-    rtc.set_time(timeinfo);
-    ESP_LOGI(TAG, "Updated RTC time and sleeping for 2 seconds");
-    vTaskDelay(2000/portTICK_RATE_MS);
-    rtc.get_time(timeinfo);
-    now = std::mktime(&timeinfo);
-    ESP_LOGI(TAG, "Time is UTC %s", std::ctime(&now));
-
 
     xTaskCreate(particulate_measurement_task, "measurement task", 8*1024, NULL, 2, &xMeasurementTaskHandle);
     mqtt_app_start();

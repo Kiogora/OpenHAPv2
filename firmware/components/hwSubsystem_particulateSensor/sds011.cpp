@@ -24,41 +24,117 @@ powerState(GPIO_NUM_26, externalHardwareInterface::gpio::output), uartPort(uartP
     uart_set_pin(uartPort, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
 }
 
-esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMeasurement(uint16_t& PM2_5)
+esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMeasurement(float& PM2_5, size_t numPacketsToAverage)
 {
     if (powerState.read() == powerState.inactive)
     {
         ESP_LOGE(TAG, "SDS011 sensor not activated!");
         return ESP_ERR_INVALID_STATE;
     }
-    const int bytesRead  = performDataAcquisition();
+    const int bytesRead  = performDataAcquisition((1.5*dataIntervalMs)*numPacketsToAverage);
     
     ESP_LOGD(TAG, "Read %d bytes", bytesRead);
-    if (bytesRead != activeReportingMeasurementLength)
+    if (bytesRead < activeReportingMeasurementLength)
     {
         memset(readBuffer, 0, readBufferByteSize);
         return ESP_ERR_INVALID_SIZE;
     }
 
-    performDataProcessing(PM2_5);
+    float measurementSum = 0.;
+    uint32_t numReadingsFound = 0;
+
+    parseBuffer(bytesRead, measurementSum, numReadingsFound);
+    PM2_5 = measurementSum/numReadingsFound;
     memset(readBuffer, 0, readBufferByteSize);
     return ESP_OK;
 }
 
-int externalHardwareSubsystem::particulateSensor::SDS011::performDataAcquisition()
+int externalHardwareSubsystem::particulateSensor::SDS011::performDataAcquisition(uint32_t waitTimeMs)
 {
     vTaskDelay(recommendedQueryDelayMs /portTICK_RATE_MS);
     uart_flush(uartPort);
-    int bytesRead = uart_read_bytes(uartPort, readBuffer, readBufferByteSize, dataIntervalMs / portTICK_RATE_MS);
+    int bytesRead = uart_read_bytes(uartPort, readBuffer, readBufferByteSize, waitTimeMs / portTICK_RATE_MS);
     ESP_LOG_BUFFER_HEXDUMP(TAG, readBuffer, readBufferByteSize, ESP_LOG_DEBUG);
     return bytesRead;
 }
 
-void externalHardwareSubsystem::particulateSensor::SDS011::performDataProcessing(uint16_t& PM2_5)
+esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::parseBuffer(const int bytesRead, float& measurement_sum, size_t& numReadingsFound)
 {
-    const uint8_t PM_25_MSB_POSITION{3};
-    const uint8_t PM_25_LSB_POSITION{2};
-    PM2_5 = conv_int_8_16(readBuffer[PM_25_MSB_POSITION], readBuffer[PM_25_LSB_POSITION]);
+    uint8_t _step = 0;
+    float measurement = 0.;
+
+    size_t checksum = 0;
+    uint8_t packet_checksum = 0;
+
+    uint8_t pm_2_5_msb = 0;
+    uint8_t pm_2_5_lsb = 0;
+
+    measurement_sum = 0;
+    numReadingsFound = 0;
+    for (size_t i = 0; i < bytesRead; ++i)
+    {
+        const auto b = readBuffer[i];
+        switch (_step)
+        {
+            /*Head*/
+            case 0:
+                if (b != 0xAA)
+                {
+                    _step = 0;
+                    continue;
+                }
+                ESP_LOGI(TAG, "Parsing step 1/4: Found packet header, continuing parsing...");
+                ++_step;
+                break;
+
+            /*Command ID*/
+            case 1:
+                if (b != 0xC0)
+                {
+                    ESP_LOGI(TAG, "Parsing step 2/4: Found invalid command ID 0x%X, continuing parsing...", b);
+                    _step = 0;
+                    continue;
+                }
+                ESP_LOGI(TAG, "Parsing step 2/4: Found valid command ID, continuing parsing...");
+                ++_step;
+                break;
+
+            /*Checksum - Not including Head, command ID  or tail*/
+            case 2:
+                checksum = 0;
+                packet_checksum = readBuffer[i+7];
+                for(size_t checksum_input = 0; checksum_input < 6; ++checksum_input)
+                {
+                    checksum_input += readBuffer[i+checksum_input];
+                }
+                checksum %= 0xFF;
+                if(checksum == packet_checksum)
+                {
+                    ESP_LOGI(TAG, "Parsing step 3/4: Checksum invalid, packet checksum is 0x%X, found 0x%X...continuing parsing...", packet_checksum, checksum);
+                    _step = 0;
+                    continue;
+                }
+                ESP_LOGI(TAG, "Parsing step 3/4: checksum match");
+                ++_step;
+                break;
+
+            /*Obtain the PM2.5 reading*/
+            case 3:
+                pm_2_5_msb = readBuffer[i+1];
+                pm_2_5_lsb = readBuffer[i];
+                measurement = ( conv_int_8_16(pm_2_5_msb, pm_2_5_lsb) / 10 );
+                ESP_LOGI(TAG, "Parsing step 4/4: Found measurement of %f ug/m3...continuing parsing...", measurement);
+                measurement_sum += measurement;
+                ++numReadingsFound;
+                _step = 0;
+                continue;
+        }
+    }
+    if(numReadingsFound == 0)
+    {
+        return ESP_ERR_NOT_FOUND;
+    }
+    return ESP_OK;
 }
 
 uint16_t inline externalHardwareSubsystem::particulateSensor::SDS011::conv_int_8_16(uint8_t msb, uint8_t lsb)
