@@ -62,4 +62,4 @@ root@8c91937edbca:~$ idf.py menuconfig build
 
 Commands which communicate with the board, such as idf.py flash and idf.py monitor will not work in the container unless the serial port is passed through into the container. However currently this is not possible with Docker for Windows (https://github.com/docker/for-win/issues/1018) and Docker for Mac (https://github.com/docker/for-mac/issues/900).
 
-A standard work across all OS's is to flash directly from the host OS.
+A standard workaround across all OS's is to setup [esptool](https://github.com/espressif/esptool) and flash directly from the host OS.
