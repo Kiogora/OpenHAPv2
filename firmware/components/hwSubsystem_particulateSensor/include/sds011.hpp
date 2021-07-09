@@ -27,13 +27,15 @@ namespace externalHardwareSubsystem
     static_assert(recommendedQueryDelayMs == 3000U, "Minimum sampling interval not default. Check: Laser_Dust_Sensor_Control_Protocol_V1.3 PDF");
     static_assert(measurementStabilityMs == 30000U, "Data stability delay is not default. Check: Laser_Dust_Sensor_Control_Protocol_V1.3 PDF");
     static_assert(dataIntervalMs== 1000U, "Serial data output interval not default. Check: Laser PM2.5 Sensor specification PDF");
+        
+    externalHardwareInterface::gpio powerState;
 
     /*Constructor method*/
     SDS011(gpio_num_t rxPin = GPIO_NUM_22, gpio_num_t txPin = GPIO_NUM_23, gpio_num_t loadswitchGpio = GPIO_NUM_26, uart_port_t uartPort = UART_NUM_1);
+        
+    esp_err_t applyCorrectionFactors(float& PM2_5);
     esp_err_t getParticulateMeasurement(float& PM2_5, size_t numPacketsToAverage = 1);
-
-    externalHardwareInterface::gpio powerState;
-
+        
     private:
     uart_port_t uartPort;
     uint8_t readBuffer[readBufferByteSize];
