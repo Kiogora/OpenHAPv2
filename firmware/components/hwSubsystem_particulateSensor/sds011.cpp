@@ -22,6 +22,13 @@ powerState(GPIO_NUM_26, externalHardwareInterface::gpio::output), uartPort(uartP
     uart_driver_install(uartPort, 2 * readBufferByteSize, 0, 0, NULL, 0);
     uart_param_config(uartPort, &uart_config);
     uart_set_pin(uartPort, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    memset(readBuffer, 0, readBufferByteSize);
+}
+
+esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::applyCorrectionFactors(float& PM2_5)
+{
+    /*A temporary placeholder*/
+    return ESP_OK;
 }
 
 esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMeasurement(float& PM2_5, size_t numPacketsToAverage)
@@ -31,21 +38,31 @@ esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMe
         ESP_LOGE(TAG, "SDS011 sensor not activated!");
         return ESP_ERR_INVALID_STATE;
     }
-    const int bytesRead  = performDataAcquisition((1.5*dataIntervalMs)*numPacketsToAverage);
     
+    const int bytesRead  = performDataAcquisition((1.5*dataIntervalMs)*numPacketsToAverage);
     ESP_LOGD(TAG, "Read %d bytes", bytesRead);
+    if (bytesRead == -1)
+    {
+        return ESP_ERR_FAIL;
+    }
     if (bytesRead < activeReportingMeasurementLength)
     {
-        memset(readBuffer, 0, readBufferByteSize);
+        memset(readBuffer, 0, bytesRead);
         return ESP_ERR_INVALID_SIZE;
     }
 
     float measurementSum = 0.;
     uint32_t numReadingsFound = 0;
-
-    parseBuffer(bytesRead, measurementSum, numReadingsFound);
+    
+    esp_err_t ret = parseBuffer(bytesRead, measurementSum, numReadingsFound)    
+    if (ret != ESP_OK)
+    {
+        memset(readBuffer, 0, bytesRead);
+        return ret;
+    }
     PM2_5 = measurementSum/numReadingsFound;
-    memset(readBuffer, 0, readBufferByteSize);
+    applyCorrectionFactors(PM2_5);
+    memset(readBuffer, 0, bytesRead);
     return ESP_OK;
 }
 
