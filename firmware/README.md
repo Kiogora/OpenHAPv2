@@ -25,19 +25,25 @@ git clone https://github.com/Kiogora/OpenHAPv2.git && cd OpenHAPv2/firmware
 
 The next step is to setup and start an ESP-IDF build container. This will download the image if not already present on the build machine.
 
-Run:
+On linux distro host, run:
 
 ```console
 docker run --rm -v $PWD:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 
-Or setup a container using other SDK versions:
+On Windows powershell, run:
 
 ```console
-docker run --rm -v $PWD:/usr/src/app -w /usr/src/app -it espressif/idf:<Your desired image tag>
+docker run --rm -v ${PWD}:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 
-The firmware has been built and tested with ESP-IDF release version 4.3. ESP-IDF image tags follow ESP-IDF tag conventions on Github.
+On Windows command-prompt, run:
+
+```console
+docker run --rm -v %cd%:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+```
+
+The firmware has been built and tested with ESP-IDF release version 4.3. ESP-IDF image tags follow ESP-IDF tag conventions on Github. You may change the commands above to reflect your desired image.
 
 For further information, do reference the [official docker documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/tools/idf-docker-image.html) by Espressif Systems.
 
@@ -50,7 +56,7 @@ Run build command:
 idf.py build
 ```
 
-Or if you need to setup configurations prior to building using the Kconfig tool bundled with ESP-IDF use:
+Or if you need to setup configurations prior to building using the Kconfig tool bundled with ESP-IDF, use:
 
 ```console
 idf.py menuconfig build
