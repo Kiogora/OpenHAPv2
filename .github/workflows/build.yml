@@ -1,10 +1,15 @@
 on: push
 jobs:
-  lint:
-    runs-on: ubuntu-18.04
+  build_firmware:
+    runs-on: ubuntu-latest
     steps:
-    - name: Build firmware
-      run: |
+    - name: List files
+      run:
         ls
+    - name: Change directory
+      run:
+        cd firmware
+    - name: Build firmware
+      run:
         cd firmware
         docker run --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 build
