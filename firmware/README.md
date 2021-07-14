@@ -5,7 +5,7 @@ Improvements from the [earlier firmware version](https://github.com/Kaiote-opens
 1. Code rewritten in C++ from C improving code maintainability and abstraction.
 2. Addition and separation of hardware validation, normalization/calibration and field measurement code.
 
-##  Building The Firmware
+##  Building The Firmware Locally
 
 The firmware build process has a dependency on the [ESP-IDF SDK](https://github.com/espressif/esp-idf), that must be set up correctly on the build machine.
 
