@@ -5,15 +5,7 @@ jobs:
     steps:
     - name: Check out repository code
       uses: actions/checkout@v2
-    - name: List files at project root
-      run:
-        ls
-    - name: Change directory
-      run:
-        cd firmware
-    - name: List files in firmware folder
-      run:
-        ls
     - name: Build firmware
-      run:
-        docker run --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 idf.py build
+      run: docker run --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 idf.py build
+      working-directory: ./firmware
+      
