@@ -43,7 +43,7 @@ esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMe
     ESP_LOGD(TAG, "Read %d bytes", bytesRead);
     if (bytesRead == -1)
     {
-        return ESP_ERR_FAIL;
+        return ESP_FAIL;
     }
     if (bytesRead < activeReportingMeasurementLength)
     {
@@ -54,7 +54,7 @@ esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMe
     float measurementSum = 0.;
     uint32_t numReadingsFound = 0;
     
-    esp_err_t ret = parseBuffer(bytesRead, measurementSum, numReadingsFound)    
+    esp_err_t ret = parseBuffer(bytesRead, measurementSum, numReadingsFound);   
     if (ret != ESP_OK)
     {
         memset(readBuffer, 0, bytesRead);
