@@ -1,4 +1,4 @@
-name: firmware-build
+name: Firmware builds
 on:
   push:
     paths:
