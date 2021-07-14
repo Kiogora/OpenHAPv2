@@ -25,22 +25,39 @@ git clone https://github.com/Kiogora/OpenHAPv2.git && cd OpenHAPv2/firmware
 
 The next step is to setup and start an ESP-IDF build container. This will download the image if not already present on the build machine.
 
+The firmware folder containing the main.cpp file to build is passed as an environmental variable to the docker container. The folder options are:
+
+- hardwareValidation
+- particulateSensorNormalization
+
 On linux distro host, run:
 
 ```console
-docker run --rm -v $PWD:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+docker run --env=hardwareValidation --rm -v $PWD:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+```
+or
+```console
+docker run --env=particulateSensorNormalization --rm -v $PWD:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 
 On Windows powershell, run:
 
 ```console
-docker run --rm -v ${PWD}:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+docker run --env=hardwareValidation --rm -v ${PWD}:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+```
+or
+```console
+docker run --env=particulateSensorNormalization --rm -v ${PWD}:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 
 On Windows command-prompt, run:
 
 ```console
-docker run --rm -v %cd%:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+docker run --env=hardwareValidation --rm -v %cd%:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+```
+or
+```console
+docker run --env=particulateSensorNormalization --rm -v %cd%:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 
 The firmware has been built and tested with ESP-IDF release version 4.3. ESP-IDF image tags follow ESP-IDF tag conventions on Github. You may change the commands above to reflect your desired image.
@@ -56,12 +73,11 @@ Run build command:
 idf.py build
 ```
 
-Or if you need to setup configurations prior to building using the Kconfig tool bundled with ESP-IDF, use:
+Or if you need to setup firmware configurations prior to building using the Kconfig tool bundled with ESP-IDF, use:
 
 ```console
 idf.py menuconfig build
 ```
-
 
 For further information, see https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/#get-started-build
 
