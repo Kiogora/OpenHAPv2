@@ -12,17 +12,9 @@ jobs:
     - name: Check out repository code
       uses: actions/checkout@v2
     - name: Build hardware validation firmware
-      run: |
-        env
-        docker run --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 idf.py build
+      run: docker run --env MAINFOLDER=hardwareValidation --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 idf.py build
       working-directory: ./firmware
-      env:
-        MAINFOLDER: hardwareValidation
     - name: Build normalization/calibration firmware
-      run: |
-        env
-        docker run --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 idf.py build
+      run: docker run --env MAINFOLDER=particulateSensorNormalization --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 idf.py build
       working-directory: ./firmware
-      env:
-        MAINFOLDER: particulateSensorNormalization
       
