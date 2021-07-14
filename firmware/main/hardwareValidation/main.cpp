@@ -80,11 +80,11 @@ extern "C" void app_main()
 #endif
 
 #ifdef CONFIG_ENABLE_PM_SENSOR_TEST_HARDWARE_VALIDATION
-    uint16_t pollutantConcentration = 0;
+    float pollutantConcentration = 0;
     ESP_LOGI(TEST_TAG, "PARTICULATE SENSOR AND LOADSWITCH");
     particulateSensor.powerState.on();
     particulateSensor.getParticulateMeasurement(pollutantConcentration);
-    ESP_LOGI(RESULT_TAG, "PM 2.5 value: %u μg/m³", pollutantConcentration);
+    ESP_LOGI(RESULT_TAG, "PM 2.5 value: %f μg/m³", pollutantConcentration);
     particulateSensor.powerState.off();
 #endif
 
