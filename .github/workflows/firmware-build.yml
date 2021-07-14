@@ -3,6 +3,8 @@ on:
   push:
     paths:
     - 'firmware/**'
+    - '!.github/workflows/**'
+    - '.github/workflows/firmware-build.yml'
 jobs:
   build:
     runs-on: ubuntu-latest
