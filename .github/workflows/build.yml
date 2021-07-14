@@ -13,5 +13,4 @@ jobs:
         cd firmware
     - name: Build firmware
       run:
-        cd firmware
         docker run --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 build
