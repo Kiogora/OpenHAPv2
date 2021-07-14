@@ -33,31 +33,31 @@ The firmware folder containing the main.cpp file to build is passed as an enviro
 On linux distro host, run:
 
 ```console
-docker run --env=hardwareValidation --rm -v $PWD:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+docker run --env MAINFOLDER=hardwareValidation --rm -v $PWD:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 or
 ```console
-docker run --env=particulateSensorNormalization --rm -v $PWD:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+docker run --env MAINFOLDER=particulateSensorNormalization --rm -v $PWD:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 
 On Windows powershell, run:
 
 ```console
-docker run --env=hardwareValidation --rm -v ${PWD}:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+docker run --env MAINFOLDER=hardwareValidation --rm -v ${PWD}:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 or
 ```console
-docker run --env=particulateSensorNormalization --rm -v ${PWD}:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+docker run --env MAINFOLDER=particulateSensorNormalization --rm -v ${PWD}:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 
 On Windows command-prompt, run:
 
 ```console
-docker run --env=hardwareValidation --rm -v %cd%:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+docker run --env MAINFOLDER=hardwareValidation --rm -v %cd%:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 or
 ```console
-docker run --env=particulateSensorNormalization --rm -v %cd%:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
+docker run --env MAINFOLDER=particulateSensorNormalization --rm -v %cd%:/usr/src/app -w /usr/src/app -it espressif/idf:release-v4.3
 ```
 
 The firmware has been built and tested with ESP-IDF release version 4.3. ESP-IDF image tags follow ESP-IDF tag conventions on Github. You may change the commands above to reflect your desired image.
