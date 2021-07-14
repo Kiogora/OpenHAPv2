@@ -31,7 +31,7 @@ esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::applyCorrectionF
     return ESP_OK;
 }
 
-esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMeasurement(float& PM2_5, size_t numPacketsToAverage)
+esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMeasurement(float& PM2_5, const size_t numPacketsToAverage)
 {
     if (powerState.read() == powerState.inactive)
     {
