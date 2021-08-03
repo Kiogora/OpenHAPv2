@@ -2,6 +2,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "sds011.hpp"
+#include "correction_factors.hpp"
 #include "gpio.hpp"
 
 #define TAG "externalHardwareSubsystem::particulateSensor"
@@ -27,7 +28,7 @@ powerState(GPIO_NUM_26, externalHardwareInterface::gpio::output), uartPort(uartP
 
 esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::applyCorrectionFactors(float& PM2_5)
 {
-    /*A temporary placeholder*/
+    PM2_5 = (slope*PM2_5)+intercept;
     return ESP_OK;
 }
 
