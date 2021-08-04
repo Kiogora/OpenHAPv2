@@ -1,11 +1,12 @@
 import subprocess, platform, csv, sys, os
 
 def show_help():
-    print('embedCorrectionFactors.py - Generates C++ header with PM sensor adjustment factors, for the connected device')
+    print('embedCorrectionFactors.py - Generates C++ header with PM sensor adjustment factors '
+          'for the connected device prior to compilation and flashing steps')
     print('  Usage: python embedCorrectionFactors.py [device port]')
     print('  Examples:')
+    print('    python.exe    embedCorrectionFactors.py COM4')
     print('    python     embedCorrectionFactors.py /dev/ttyUSB0')
-    print('    python.exe embedCorrectionFactors.py COM4')
 
 # Read Base MAC address of connected device
 def get_mac(device_port):
