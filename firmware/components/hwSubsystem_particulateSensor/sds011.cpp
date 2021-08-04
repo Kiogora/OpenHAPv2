@@ -28,7 +28,8 @@ powerState(GPIO_NUM_26, externalHardwareInterface::gpio::output), uartPort(uartP
 
 esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::applyCorrectionFactors(float& PM2_5)
 {
-    PM2_5 = (slope*PM2_5)+intercept;
+    /* See software/particulateSensorNormalization/analysis.ipynb - 'correct entire dataset' section and subsequent corrected plots*/
+    PM2_5 = (slope_adjustment*PM2_5)+intercept_adjustment;
     return ESP_OK;
 }
 
