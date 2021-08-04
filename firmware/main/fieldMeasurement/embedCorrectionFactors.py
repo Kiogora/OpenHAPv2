@@ -1,4 +1,4 @@
-import subprocess, csv, os
+import subprocess, csv, sys, os
 
 def show_help():
     print 'embedCorrectionFactors.py - Generates headers with PM sensor adjustment factors, for the connected device'
