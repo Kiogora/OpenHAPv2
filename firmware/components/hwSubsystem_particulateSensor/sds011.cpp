@@ -33,7 +33,7 @@ esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::applyCorrectionF
     return ESP_OK;
 }
 
-esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMeasurement(float& PM2_5, const size_t numPacketsToAverage)
+esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMeasurement(float& PM2_5, const size_t numPacketsToAverage, bool useExistingNormalizedResponse)
 {
     if (powerState.read() == powerState.inactive)
     {
@@ -63,7 +63,10 @@ esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::getParticulateMe
         return ret;
     }
     PM2_5 = measurementSum/numReadingsFound;
-    applyCorrectionFactors(PM2_5);
+    if (useExistingNormalizedResponse == true)
+    {
+        applyCorrectionFactors(PM2_5);
+    }
     memset(readBuffer, 0, bytesRead);
     return ESP_OK;
 }

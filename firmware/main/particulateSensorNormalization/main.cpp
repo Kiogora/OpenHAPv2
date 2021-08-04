@@ -67,7 +67,7 @@ extern "C" void particulate_measurement_task(void *arg)
             warningLed.write(warningLed.active);
             rtc.get_time(timeinfo);
             now = std::mktime(&timeinfo);
-            particulateSensor.getParticulateMeasurement(pollutantConcentration, numPacketsToAverage);
+            particulateSensor.getParticulateMeasurement(pollutantConcentration, numPacketsToAverage, useExistingNormalizedResponse = false);
             int msg_id = esp_mqtt_client_publish(client, (std::string("measurement/")+std::string(macStr)).c_str(), (std::to_string(pollutantConcentration)+","+std::to_string(now)).c_str(), 0, 2, 0);
             ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
             warningLed.write(warningLed.inactive);

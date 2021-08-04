@@ -23,8 +23,9 @@ static const char *TEST_TAG = "TEST";
 static const char *RESULT_TAG = "RESULT";
 
 extern "C" void app_main()
-{  
+{   /* Construct thermal imager object*/
     externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager;
+    /* Add DS3231 to thermal imager's I2C bus*/
     externalHardwareSubsystem::timekeeping::DS3231 ds3231(thermalImager);
 
 #ifdef CONFIG_ENABLE_USER_LED_TEST_HARDWARE_VALIDATION
@@ -40,7 +41,13 @@ extern "C" void app_main()
 
 #ifdef CONFIG_ENABLE_VISUALIZE_I2C_BUS_HARDWARE_VALIDATION
     ESP_LOGI(TEST_TAG, "I2C BUS DEVICE DETECTION");
-    thermalImager.scanBusAddresses();
+    #ifdef CONFIG_ENABLE_THERMAL_IMAGER_TEST_HARDWARE_VALIDATION
+        thermalImager.scanBusAddresses();
+    #elif CONFIG_ENABLE_RTC_TEST_HARDWARE_VALIDATION
+        ds3231.scanBusAddresses();
+    #else
+        ESP_LOGI(RESULT_TAG, "Error: No I2C device activated for test");
+    #endif
 #endif
 
 #ifdef CONFIG_ENABLE_RTC_TEST_HARDWARE_VALIDATION
@@ -71,8 +78,7 @@ extern "C" void app_main()
 #endif
 
 #ifdef CONFIG_ENABLE_THERMAL_IMAGER_TEST_HARDWARE_VALIDATION
-    float maxThermalTemperature = 0.;
-    externalHardwareSubsystem::particulateSensor::SDS011 particulateSensor;  
+    float maxThermalTemperature = 0.; 
     ESP_LOGI(TEST_TAG, "THERMOPILE SENSOR");
     const float* imageBuffer = thermalImager.GetImage();
     maxThermalTemperature = *std::max_element(imageBuffer, imageBuffer+thermalImager.pixelCount);
@@ -81,9 +87,10 @@ extern "C" void app_main()
 
 #ifdef CONFIG_ENABLE_PM_SENSOR_TEST_HARDWARE_VALIDATION
     float pollutantConcentration = 0;
+    externalHardwareSubsystem::particulateSensor::SDS011 particulateSensor; 
     ESP_LOGI(TEST_TAG, "PARTICULATE SENSOR AND LOADSWITCH");
     particulateSensor.powerState.on();
-    particulateSensor.getParticulateMeasurement(pollutantConcentration);
+    particulateSensor.getParticulateMeasurement(pollutantConcentration, useNormalizedResponse = false);
     ESP_LOGI(RESULT_TAG, "PM 2.5 value: %f μg/m³", pollutantConcentration);
     particulateSensor.powerState.off();
 #endif
