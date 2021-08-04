@@ -33,7 +33,7 @@ def get_mac(device_port):
         return -1
     else: 
         mac = filtered[0].replace(substr, '')
-    return mac
+    return mac.rstrip()
 
 #Retrieve correction factors from CSV
 def retrieve_correction_factors(mac_address, csv_path):
