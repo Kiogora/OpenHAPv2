@@ -1,4 +1,4 @@
-import subprocess, csv, sys, os
+import subprocess, platform, csv, sys, os
 
 def show_help():
     print('embedCorrectionFactors.py - Generates C++ header with PM sensor adjustment factors, for the connected device')
@@ -10,9 +10,21 @@ def show_help():
 # Read Base MAC address of connected device
 def get_mac(device_port):
     substr = 'MAC: '
-    
-    process = subprocess.Popen(f'esptool.py -p {device_port} read_mac'.split(), 
-                               stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    system = platform.system()
+
+    if system == 'Windows':
+        # To install esptool as a python module, try pyton.exe -m pip install esptool
+        # See issue on accessing COM ports via docker guest in firmware folder README
+        process = subprocess.Popen([sys.executable,'-m','esptool','-p',device_port,'read_mac'], 
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    elif system == 'Linux':
+        # On Linux, com ports are accessible directly. The below will work after get_idf cmd
+        # esptool is added to path automatically via get_idf on entry into the SDK container
+        process = subprocess.Popen(f'esptool -p {device_port} read_mac'.split(), 
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    else:
+        print('OS unsupported')
+        return -1
     stdout, stderr = process.communicate()
     split_stdout = stdout.decode().split('\n')
     filtered = [line for line in split_stdout if substr in line]
