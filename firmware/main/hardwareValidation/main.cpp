@@ -90,7 +90,7 @@ extern "C" void app_main()
     externalHardwareSubsystem::particulateSensor::SDS011 particulateSensor; 
     ESP_LOGI(TEST_TAG, "PARTICULATE SENSOR AND LOADSWITCH");
     particulateSensor.powerState.on();
-    particulateSensor.getParticulateMeasurement(pollutantConcentration, useExistingNormalizedResponse = false);
+    particulateSensor.getParticulateMeasurement(pollutantConcentration);
     ESP_LOGI(RESULT_TAG, "PM 2.5 value: %f μg/m³", pollutantConcentration);
     particulateSensor.powerState.off();
 #endif
