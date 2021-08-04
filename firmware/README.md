@@ -85,4 +85,34 @@ For further information, see https://docs.espressif.com/projects/esp-idf/en/late
 
 Commands which communicate with the board, such as idf.py flash and idf.py monitor will not work in the container unless the serial port is passed through into the container. However currently this is not possible with Docker for Windows (https://github.com/docker/for-win/issues/1018) and Docker for Mac (https://github.com/docker/for-mac/issues/900).
 
-A standard workaround across all OS's is to setup [esptool](https://github.com/espressif/esptool) and flash directly from the host OS.
+A standard workaround across windows is to setup [esptool](https://github.com/espressif/esptool) and flash directly from the host OS.
+
+#### - Exit from the container
+
+```console
+exit()
+```
+
+#### - Install esptool
+
+```console
+python -m pip install esptool
+```
+
+or on Windows
+
+```console
+python.exe -m pip install esptool
+```
+#### - Flash 
+
+```console
+python.exe -m pip esptool -p (PORT) -b 460800 --before default_reset --after hard_reset --chip esp32  write_flash --flash_mode dio --flash_size detect --flash_freq 40m 0x1000 build/bootloader/bootloader.bin 0x8000 build/partition_table/partition-table.bin 0x10000 build/main.bin
+```
+
+or on Windows
+
+```console
+python.exe -m pip esptool -p (PORT) -b 460800 --before default_reset --after hard_reset --chip esp32  write_flash --flash_mode dio --flash_size detect --flash_freq 40m 0x1000 build/bootloader/bootloader.bin 0x8000 build/partition_table/partition-table.bin 0x10000 build/main.bin
+```
+where PORT is the desired serial port port.
