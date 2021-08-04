@@ -17,12 +17,12 @@ def get_mac(device_port):
         # To install esptool as a python module, try pyton.exe -m pip install esptool
         # See issue on accessing COM ports via docker guest in firmware folder README
         process = subprocess.Popen([sys.executable,'-m','esptool','-p',device_port,'read_mac'], 
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     elif system == 'Linux':
         # On Linux, com ports are accessible directly. The below will work after get_idf cmd
         # esptool is added to path automatically via get_idf on entry into the SDK container
         process = subprocess.Popen(f'esptool -p {device_port} read_mac'.split(), 
-                        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     else:
         print('OS unsupported')
         return -1
