@@ -11,7 +11,7 @@ def show_help():
 def get_mac(device_port):
     substr = 'MAC: '
     
-    process = subprocess.Popen(f'esptool -p {device_port} read_mac'.split(), 
+    process = subprocess.Popen(f'esptool.py -p {device_port} read_mac'.split(), 
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = process.communicate()
     split_stdout = stdout.decode().split('\n')
