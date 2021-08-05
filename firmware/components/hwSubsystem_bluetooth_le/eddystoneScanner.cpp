@@ -12,6 +12,8 @@
 
 #include "eddystoneScanner.hpp"
 
+#if CONFIG_BT_ENABLED
+
 static const char *TAG = "internalHardwareSubsystem::bluetooth";
 
 internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner()
@@ -295,3 +297,5 @@ inline bool internalHardwareSubsystem::bluetooth::eddystoneScanner::esp_eddyston
 {
     return (ch >= 0x00 && ch <= 0x20) || (ch >= 0x7f && ch <= 0xff);
 }
+
+#endif
