@@ -82,7 +82,7 @@ int externalHardwareSubsystem::particulateSensor::SDS011::performDataAcquisition
 
 esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::parseBuffer(const int bytesRead, float& measurement_sum, size_t& numReadingsFound)
 {
-    uint8_t _step = 0;
+    uint8_t _step = 1;
     float measurement = 0.;
 
     size_t checksum = 0;
@@ -99,56 +99,54 @@ esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::parseBuffer(cons
         switch (_step)
         {
             /*Head*/
-            case 0:
+            case 1:
                 if (b != 0xAA)
                 {
-                    _step = 0;
+                    ESP_LOGI(TAG, "Parsing step 1/3: Found invalid packet header 0x%X...continuing parsing...", b);
+                    _step = 1;
                     continue;
                 }
-                ESP_LOGI(TAG, "Parsing step 1/4: Found packet header, continuing parsing...");
+                ESP_LOGI(TAG, "Parsing step 1/3: Found packet header 0xAA...continuing parsing...");
                 ++_step;
-                break;
+                continue;
 
             /*Command ID*/
-            case 1:
+            case 2:
                 if (b != 0xC0)
                 {
-                    ESP_LOGI(TAG, "Parsing step 2/4: Found invalid command ID 0x%X, continuing parsing...", b);
-                    _step = 0;
+                    ESP_LOGI(TAG, "Parsing step 2/3: Found invalid command ID 0x%X...continuing parsing...", b);
+                    _step = 1;
                     continue;
                 }
-                ESP_LOGI(TAG, "Parsing step 2/4: Found valid command ID, continuing parsing...");
+                ESP_LOGI(TAG, "Parsing step 2/3: Found valid command ID 0xC0...continuing parsing...");
                 ++_step;
-                break;
+                continue;
 
             /*Checksum - Not including Head, command ID  or tail*/
-            case 2:
+            case 3:
                 checksum = 0;
-                packet_checksum = readBuffer[i+7];
+                packet_checksum = readBuffer[i+6];
                 for(size_t checksum_input = 0; checksum_input < 6; ++checksum_input)
                 {
-                    checksum_input += readBuffer[i+checksum_input];
+                    checksum += readBuffer[i+checksum_input];
                 }
                 checksum %= 0xFF;
-                if(checksum == packet_checksum)
+                if(checksum != packet_checksum)
                 {
-                    ESP_LOGI(TAG, "Parsing step 3/4: Checksum invalid, packet checksum is 0x%X, found 0x%X...continuing parsing...", packet_checksum, checksum);
-                    _step = 0;
+                    ESP_LOGI(TAG, "Parsing step 3/3: Checksum invalid, packet checksum is 0x%X, found 0x%X...continuing parsing...", packet_checksum, checksum);
+                    _step = 1;
                     continue;
                 }
-                ESP_LOGI(TAG, "Parsing step 3/4: checksum match");
-                ++_step;
-                break;
-
-            /*Obtain the PM2.5 reading*/
-            case 3:
+                ESP_LOGI(TAG, "Parsing step 3/3: checksum 0x%X ok...continuing parsing...", checksum);
+                /*Obtain the PM2.5 reading*/
                 pm_2_5_msb = readBuffer[i+1];
                 pm_2_5_lsb = readBuffer[i];
+                ESP_LOGI(TAG, "Parsing step 3/3: Found PM 2.5 = 0x%X%X ug/m3, decoding...", pm_2_5_msb, pm_2_5_lsb);
                 measurement = ( conv_int_8_16(pm_2_5_msb, pm_2_5_lsb) / 10 );
-                ESP_LOGI(TAG, "Parsing step 4/4: Found measurement of %f ug/m3...continuing parsing...", measurement);
+                ESP_LOGI(TAG, "Parsing step 3/3: Found measurement of %f ug/m3...continuing parsing...", measurement);
                 measurement_sum += measurement;
                 ++numReadingsFound;
-                _step = 0;
+                _step = 1;
                 continue;
         }
     }
