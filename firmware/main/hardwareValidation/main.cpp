@@ -52,13 +52,19 @@ extern "C" void app_main()
 
 #ifdef CONFIG_ENABLE_RTC_TEST_HARDWARE_VALIDATION
 #ifdef CONFIG_ENABLE_SNTP_RTC_TEST_HARDWARE_VALIDATION
+    std::time_t  now;
+    while (ds3231.get_time(now) != ESP_OK)
+    {
+        ESP_LOGE(RESULT_TAG, "Could not get time from RTC");
+    }
+    ESP_LOGI(RESULT_TAG, "RTC time obtained prior to validation exercise is: UTC %s", std::ctime(&now));
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_netif_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
     ESP_ERROR_CHECK(example_connect());
     std::tm timeinfo;
     systemUtils::obtainSystemTimeFromSntp(timeinfo);
-    std::time_t now = std::mktime(&timeinfo);
+    now = std::mktime(&timeinfo);
 #endif    
 #ifdef CONFIG_ENABLE_STATIC_RTC_TEST_HARDWARE_VALIDATION
     std::time_t unixtime_now = 1555425481;
@@ -66,15 +72,17 @@ extern "C" void app_main()
     ESP_LOGI(TEST_TAG, "EXTERNAL RTC");
     while (ds3231.set_time(now) != ESP_OK)
     {
-        ESP_LOGI(RESULT_TAG, "Could not set time");
+        ESP_LOGI(RESULT_TAG, "Could not set RTC time");
         vTaskDelay(250 / portTICK_PERIOD_MS);
     }
-    ESP_LOGI(RESULT_TAG, "Set time to: UTC %s", std::ctime(&now));
+    ESP_LOGI(RESULT_TAG, "Set RTC time to: UTC %s", std::ctime(&now));
+    ESP_LOGI(RESULT_TAG, "Waiting for a few seconds then read back RTC time...");
+    vTaskDelay(1000/portTICK_RATE_MS);
     while (ds3231.get_time(now) != ESP_OK)
     {
-        ESP_LOGE(RESULT_TAG, "Could not get time");
+        ESP_LOGE(RESULT_TAG, "Could not get RTC time");
     }
-    ESP_LOGI(RESULT_TAG, "Time obtained is: UTC %s", std::ctime(&now));
+    ESP_LOGI(RESULT_TAG, "RTC time read after time is set is: UTC %s", std::ctime(&now));
 #endif
 
 #ifdef CONFIG_ENABLE_THERMAL_IMAGER_TEST_HARDWARE_VALIDATION
