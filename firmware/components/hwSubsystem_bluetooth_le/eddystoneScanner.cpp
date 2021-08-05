@@ -12,11 +12,12 @@
 
 #include "eddystoneScanner.hpp"
 
-#define TAG "internalHardwareSubsystem::bluetooth"
+static const char *TAG = "internalHardwareSubsystem::bluetooth";
 
 internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner()
 {
     esp_err_t status;
+    ESP_LOGI(TAG, "Registration ok");
 
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
@@ -33,6 +34,16 @@ internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner()
         status = esp_ble_gap_register_callback(eddystoneScanner_event_callback);
         ESP_LOGE(TAG,"gap register error: %s", esp_err_to_name(status));
     } while(status != ESP_OK);
+
+    esp_ble_scan_params_t ble_scan_params = 
+    {
+        .scan_type              = BLE_SCAN_TYPE_ACTIVE,
+        .own_addr_type          = BLE_ADDR_TYPE_PUBLIC,
+        .scan_filter_policy     = BLE_SCAN_FILTER_ALLOW_ALL,
+        .scan_interval          = 0x50,
+        .scan_window            = 0x30,
+        .scan_duplicate         = BLE_SCAN_DUPLICATE_DISABLE
+    };
 
     esp_ble_gap_set_scan_params(&ble_scan_params);
 }
@@ -66,8 +77,9 @@ void internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_ev
             {
                 case ESP_GAP_SEARCH_INQ_RES_EVT:
                 {
+                    esp_eddystone_result_t res;
                     memset(&res, 0, sizeof(res));
-                    esp_err_t ret = eddystoneScanner_decode(scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len);
+                    esp_err_t ret = eddystoneScanner_decode(scan_result->scan_rst.ble_adv, scan_result->scan_rst.adv_data_len, res);
                     if (ret)
                     {
                         // error:The received data is not an eddystone frame packet or a correct eddystone frame packet.
@@ -79,10 +91,9 @@ void internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_ev
                         // The received adv data is a correct eddystone frame packet.
                         // Here, we get the eddystone infomation in eddystone_res, we can use the data in res to do other things.
                         // For example, just print them:
-                        ESP_LOGI(TAG, "--------Eddystone Found----------");
-                        esp_log_buffer_hex("EDDYSTONE_DEMO: Device address:", scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
+                        ESP_LOGI(TAG, "Eddystone Frame Found");
+                        esp_log_buffer_hex("Device address:", scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
                         ESP_LOGI(TAG, "RSSI of packet:%d dbm", scan_result->scan_rst.rssi);
-                        //eddystoneScanner_show_inform(&eddystone_res);
                     }
                     break;
                 }
@@ -108,7 +119,7 @@ void internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_ev
     }
 }
 
-esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_decode(const uint8_t* buf, uint8_t len)
+esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_decode(const uint8_t* buf, uint8_t len, esp_eddystone_result_t &res)
 {
     if (len == 0 || buf == NULL)
     {
@@ -153,10 +164,10 @@ esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScann
                 break;
         }
     }
-    return eddystoneScanner_get_inform(buf+pos, len-pos);
+    return eddystoneScanner_get_inform(buf+pos, len-pos, res);
 }
 
-esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_uid_received(const uint8_t* buf, uint8_t len)
+esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_uid_received(const uint8_t* buf, uint8_t len, esp_eddystone_result_t& res)
 {
     uint8_t pos = 0;
     //1-byte Ranging Data + 10-byte Namespace + 6-byte Instance
@@ -177,7 +188,7 @@ esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScann
     return 0;
 }
 
-esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_url_received(const uint8_t* buf, uint8_t len)
+esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_url_received(const uint8_t* buf, uint8_t len, esp_eddystone_result_t& res)
 {
     char *url_res = NULL;
     uint8_t pos = 0;
@@ -198,31 +209,11 @@ char* internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_r
     static char url_buf[100] = {0};
     const uint8_t *p = url_start;
     
-    const char* eddystone_url_prefix[4] = 
-    {
-        "http://www.",
-        "https://www.",
-        "http://",
-        "https://"
-    };
-
-    /* Eddystone-URL HTTP URL encoding */
+    const char* eddystone_url_prefix[4] = {"http://www.","https://www.","http://","https://"}; 
     static const char* eddystone_url_encoding[14] =
     {
-        ".com/",
-        ".org/",
-        ".edu/",
-        ".net/",
-        ".info/",
-        ".biz/",
-        ".gov/",
-        ".com",
-        ".org",
-        ".edu",
-        ".net",
-        ".info",
-        ".biz",
-        ".gov"
+        ".com/",".org/",".edu/",".net/",".info/",".biz/",".gov/",
+        ".com",".org",".edu",".net",".info",".biz",".gov"
     };
 
     pos += sprintf(&url_buf[pos], "%s", eddystone_url_prefix[*p++]);
@@ -240,7 +231,7 @@ char* internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_r
     }
     return url_buf;
 }
-esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_tlm_received(const uint8_t* buf, uint8_t len)
+esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_tlm_received(const uint8_t* buf, uint8_t len, esp_eddystone_result_t& res)
 {
     uint8_t pos = 0;
     if(len > EDDYSTONE_TLM_DATA_LEN)
@@ -261,21 +252,21 @@ esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScann
     res.inform.tlm.time = big_endian_read_32(buf, pos);
     return 0;
 }
-esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_get_inform(const uint8_t* buf, uint8_t len)
+esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_get_inform(const uint8_t* buf, uint8_t len, esp_eddystone_result_t& res)
 {
     static esp_err_t ret = -1;
     switch(res.common.frame_type)
     {
         case EDDYSTONE_FRAME_TYPE_UID: {
-            ret = eddystoneScanner_uid_received(buf, len);
+            ret = eddystoneScanner_uid_received(buf, len, res);
             break;
         }
         case EDDYSTONE_FRAME_TYPE_URL: {
-            ret = eddystoneScanner_url_received(buf, len);
+            ret = eddystoneScanner_url_received(buf, len, res);
             break;
         }
         case EDDYSTONE_FRAME_TYPE_TLM: {
-            ret = eddystoneScanner_tlm_received(buf, len);
+            ret = eddystoneScanner_tlm_received(buf, len, res);
             break;
         }
         default:

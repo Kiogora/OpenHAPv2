@@ -3,6 +3,7 @@
 
 #include "stdint.h"
 #include "esp_err.h"
+#include "esp_gap_ble_api.h"
 
 namespace internalHardwareSubsystem
 {
@@ -21,17 +22,7 @@ namespace internalHardwareSubsystem
     /*BLE scan parameters and eddystone event callbacks from this point*/
     /*******************************************************************/
 
-    esp_ble_scan_params_t ble_scan_params = 
-    {
-        .scan_type              = BLE_SCAN_TYPE_ACTIVE,
-        .own_addr_type          = BLE_ADDR_TYPE_PUBLIC,
-        .scan_filter_policy     = BLE_SCAN_FILTER_ALLOW_ALL,
-        .scan_interval          = 0x50,
-        .scan_window            = 0x30,
-        .scan_duplicate         = BLE_SCAN_DUPLICATE_DISABLE
-    };
-
-    void eddystoneScanner_event_callback(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
+    static void eddystoneScanner_event_callback(esp_gap_ble_cb_event_t event, esp_ble_gap_cb_param_t* param);
 
     /**************************************************/
     /*Eddystone frame level definition from this point*/
@@ -183,24 +174,22 @@ namespace internalHardwareSubsystem
         } inform;
     };
 
-    esp_eddystone_result_t res;
+    static char* eddystoneScanner_resolve_url_scheme(const uint8_t* url_start, const uint8_t* url_end);
+    static esp_err_t eddystoneScanner_url_received(const uint8_t* buf, uint8_t len, esp_eddystone_result_t& res);
 
-    char* eddystoneScanner_resolve_url_scheme(const uint8_t* url_start, const uint8_t* url_end);
-    esp_err_t eddystoneScanner_url_received(const uint8_t* buf, uint8_t len);
+    static esp_err_t eddystoneScanner_get_inform(const uint8_t* buf, uint8_t len, esp_eddystone_result_t& res);
+    static esp_err_t eddystoneScanner_uid_received(const uint8_t* buf, uint8_t len, esp_eddystone_result_t& res);
+    static esp_err_t eddystoneScanner_tlm_received(const uint8_t* buf, uint8_t len, esp_eddystone_result_t& res);
 
-    esp_err_t eddystoneScanner_get_inform(const uint8_t* buf, uint8_t len);
-    esp_err_t eddystoneScanner_uid_received(const uint8_t* buf, uint8_t len);
-    esp_err_t eddystoneScanner_tlm_received(const uint8_t* buf, uint8_t len);
-
-    esp_err_t eddystoneScanner_decode(const uint8_t* buf, uint8_t len);
+    static esp_err_t eddystoneScanner_decode(const uint8_t* buf, uint8_t len, esp_eddystone_result_t& res);
 
     /***************************/
     /*Utilities from this point*/
     /***************************/
-    inline uint16_t little_endian_read_16(const uint8_t *buffer, uint8_t pos);
-    inline uint16_t big_endian_read_16(const uint8_t *buffer, uint8_t pos);
-    inline uint32_t big_endian_read_32(const uint8_t *buffer, uint8_t pos);
-    inline bool esp_eddystone_is_char_invalid(int ch);
+    static inline uint16_t little_endian_read_16(const uint8_t *buffer, uint8_t pos);
+    static inline uint16_t big_endian_read_16(const uint8_t *buffer, uint8_t pos);
+    static inline uint32_t big_endian_read_32(const uint8_t *buffer, uint8_t pos);
+    static inline bool esp_eddystone_is_char_invalid(int ch);
     };
     }
 }
