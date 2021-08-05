@@ -1,6 +1,6 @@
-#include <string.h>
-
+#if CONFIG_BT_ENABLED
 #include "esp_bt.h"
+#include <string.h>
 #include "nvs_flash.h"
 #include "esp_log.h"
 #include "esp_bt_defs.h"
@@ -12,7 +12,6 @@
 
 #include "eddystoneScanner.hpp"
 
-#if CONFIG_BT_ENABLED
 
 static const char *TAG = "internalHardwareSubsystem::bluetooth";
 
