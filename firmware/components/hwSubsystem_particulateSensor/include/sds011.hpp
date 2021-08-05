@@ -33,7 +33,7 @@ namespace externalHardwareSubsystem
     /*Constructor method*/
     SDS011(gpio_num_t rxPin = GPIO_NUM_22, gpio_num_t txPin = GPIO_NUM_23, gpio_num_t loadswitchGpio = GPIO_NUM_26, uart_port_t uartPort = UART_NUM_1);
         
-    esp_err_t getParticulateMeasurement(float& PM2_5, const size_t numPacketsToAverage = 3, bool useExistingNormalizedResponse = false);
+    esp_err_t getParticulateMeasurement(float& PM2_5, const size_t numPacketsToAverage = 3, bool useExistingNormalizedResponse = true);
         
     private:
     uart_port_t uartPort;
