@@ -17,4 +17,7 @@ jobs:
     - name: Build normalization/calibration firmware
       run: docker run --env MAINFOLDER=particulateSensorNormalization --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 idf.py build
       working-directory: ./firmware
+    - name: Build field measurement firmware
+      run: docker run --env MAINFOLDER=fieldMeasurement --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 idf.py build
+      working-directory: ./firmware
       
