@@ -1,4 +1,3 @@
-#if CONFIG_BT_ENABLED
 #include "esp_bt.h"
 #include <string.h>
 #include "nvs_flash.h"
@@ -296,5 +295,3 @@ inline bool internalHardwareSubsystem::bluetooth::eddystoneScanner::esp_eddyston
 {
     return (ch >= 0x00 && ch <= 0x20) || (ch >= 0x7f && ch <= 0xff);
 }
-
-#endif

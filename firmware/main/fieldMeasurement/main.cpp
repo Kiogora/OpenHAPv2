@@ -5,13 +5,14 @@
 #include "esp_log.h"
 
 #include "eddystoneScanner.hpp"
+#include "wifiManager.hpp"
 
 static const char *TAG = "FIELD_MEASUREMENT";
 extern "C" void app_main()
 {
-    ESP_LOGI(TAG, "Registration ok");
     /*Setup eddystone scanner*/
     internalHardwareSubsystem::bluetooth::eddystoneScanner activityDetector;
+    internalHardwareSubsystem::wifi::wifiManager wifiSetup;
 
     while (1)
     {
