@@ -37,28 +37,28 @@ internalHardwareSubsystem::wifi::wifiManager::wifiManager(supportedWifiModes sta
                                                             &accessPointEventHandler,
                                                             NULL,
                                                             NULL));
-        uint8_t baseMacAddress[6] = {0};
-        //Get base MAC address from EFUSE BLK0(default option)
-        // esp_err_t ret = esp_efuse_mac_get_default(baseMacAddress);
-        // if (ret != ESP_OK)
-        // {
-        //     ESP_LOGE(TAG, "Failed to get base MAC address from EFUSE BLK0. (%s)", esp_err_to_name(ret));
-        //     ESP_LOGE(TAG, "Aborting");
-        //     abort();
-        // }
-        // else
-        // {
-        //     ESP_LOGI(TAG, "Base MAC Address read from EFUSE BLK0");
-        // }
 
-        // char ssid[32];
-        // snprintf(ssid, sizeof(ssid), "OpenHAP_%02x:%02x:%02x:%02x:%02x:%02x\0",
-        //          baseMacAddress[0], baseMacAddress[1], baseMacAddress[2], 
-                //  baseMacAddress[3], baseMacAddress[4], baseMacAddress[5]);
+        uint8_t baseMacAddress[6] = {0};
+        /*Get base MAC address from EFUSE BLK0(default option)*/
+        esp_err_t ret = esp_efuse_mac_get_default(baseMacAddress);
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Failed to get base MAC address from EFUSE BLK0. (%s)", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "Aborting, setting default all zero MAC address");
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Base MAC Address read from EFUSE BLK0");
+        }
+
+        char ssid[32];
+        snprintf(ssid, sizeof(ssid), "OpenHAP_%02X:%02X:%02X:%02X:%02X:%02X",
+                 baseMacAddress[0], baseMacAddress[1], baseMacAddress[2], 
+                 baseMacAddress[3], baseMacAddress[4], baseMacAddress[5]);
 
         wifi_config_t wifi_config = {};
-        strcpy((char*)wifi_config.ap.ssid, "OpenHAP");
-        wifi_config.ap.ssid_len = strlen("Openhap");
+        strcpy((char*)wifi_config.ap.ssid, ssid);
+        wifi_config.ap.ssid_len = strlen(ssid);
         wifi_config.ap.channel = 6;
         strcpy((char*)wifi_config.ap.password, "");;
         wifi_config.ap.max_connection = 1;
@@ -72,7 +72,7 @@ internalHardwareSubsystem::wifi::wifiManager::wifiManager(supportedWifiModes sta
 
 
 void internalHardwareSubsystem::wifi::wifiManager::accessPointEventHandler(void* arg, esp_event_base_t event_base,
-                                                                                 int32_t event_id, void* event_data)
+                                                                           int32_t event_id, void* event_data)
 {
     if (event_id == WIFI_EVENT_AP_STACONNECTED)
     {

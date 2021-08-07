@@ -8,6 +8,7 @@
 #include "wifiManager.hpp"
 
 static const char *TAG = "FIELD_MEASUREMENT";
+
 extern "C" void app_main()
 {
     /*Setup eddystone scanner*/
