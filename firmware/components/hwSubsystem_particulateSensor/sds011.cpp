@@ -128,14 +128,16 @@ esp_err_t externalHardwareSubsystem::particulateSensor::SDS011::parseBuffer(cons
             case 3:
                 checksum = 0;
                 packet_checksum = readBuffer[i+6];
+                //ESP_LOGD(TAG, "Parsing step 3/3: Found packet checksum 0x%X", packet_checksum);
                 for(size_t checksum_input = 0; checksum_input < 6; ++checksum_input)
                 {
                     checksum += readBuffer[i+checksum_input];
+                    //ESP_LOGD(TAG, "Parsing step 3/3: Calculated checksum value step %zu/6: 0x%X", checksum_input+1, checksum);
                 }
-                checksum %= 0xFF;
+                checksum &= 0xFF;
                 if(checksum != packet_checksum)
                 {
-                    ESP_LOGD(TAG, "Parsing step 3/3: Checksum invalid, packet checksum is 0x%X, found 0x%X...continuing parsing...", packet_checksum, checksum);
+                    ESP_LOGD(TAG, "Parsing step 3/3: Checksum invalid, packet checksum is 0x%X, calculated checksum is 0x%X...continuing parsing...", packet_checksum, checksum);
                     _step = 1;
                     continue;
                 }
