@@ -103,6 +103,9 @@ extern "C" void app_main()
     particulateSensor.powerState.off();
 #endif
 
+    internalHardwareSubsystem::storage::spiFlashFilesystem internalStorage;
+    internalStorage.printFilesOnDisk();
+
 #ifdef CONFIG_ENABLE_DEFAULT_MAC_ADDRESS_RETRIEVAL_HARDWARE_VALIDATION
     uint8_t base_mac_addr[6] = {0};
     char macStr[18];

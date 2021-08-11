@@ -1,10 +1,13 @@
 #include <cstddef>
 #include <string>
+#include <dirent.h>
 #include <sys/stat.h>
+#include <sys/param.h>
 #include <sys/unistd.h>
 
 #include "esp_err.h"
 #include "esp_log.h"
+#include "esp_vfs.h"
 #include "esp_spiffs.h"
 #include "internalFlash.hpp"
 
@@ -36,7 +39,7 @@ internalHardwareSubsystem::storage::spiFlashFilesystem::spiFlashFilesystem(std::
             ESP_LOGE(TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
         }
     }   
-
+    ESP_LOGI(TAG, "Setup internal filesystem successfully");
     printBytesAvailable();
 }
 
@@ -61,6 +64,33 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::printBytesAvai
     return ret;
 }
 
+esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::printFilesOnDisk()
+{
+    char entrypath[ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN];
+    struct dirent* entry;
+    char entrysize[16];
+    const char* entrytype;
+    struct stat entry_stat;
+
+    DIR *dir = opendir(mountPoint.c_str());
+    const size_t dirpath_len = strlen(mountPoint.c_str());
+
+    /* Iterate over all files / folders and fetch their names and sizes */
+    while ((entry = readdir(dir)) != NULL)
+    {
+        entrytype = (entry->d_type == DT_DIR ? "directory" : "file");
+        strlcpy(entrypath + dirpath_len, entry->d_name, sizeof(entrypath) - dirpath_len);
+        if (stat(entrypath, &entry_stat) == -1)
+        {
+            ESP_LOGE(TAG, "Failed to stat %s : %s", entrytype, entry->d_name);
+            continue;
+        }
+        sprintf(entrysize, "%ld", entry_stat.st_size);
+        ESP_LOGI(TAG, "Found %s : %s (%s bytes)", entrytype, entry->d_name, entrysize);
+    }
+    return ESP_OK;
+}
+
 esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSV(uint32_t time_now, std::string macAddress, int16_t averageRssi, float particulateConcentration, float maxTemp)
 {
     int i;
@@ -72,7 +102,7 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSV(uint3
     /*Open file by append mode, if file does not exist, create it*/
     if (stat(fileName, &st) == 0)
     {
-        /*File exists, set integer to be checked*/
+        /*File exists, set boolean to be checked*/
         ESP_LOGI(TAG, "File exists, appending to file");
         fileExists = true; 
     }
@@ -83,40 +113,35 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSV(uint3
         fileExists = true;           
     }
 
-    if(fileExists)
+    file = fopen(fileName, "a");
+    if (file == NULL)
     {
-        file = fopen(fileName, "a");
-        if (file == NULL)
-        {
-            
-            ESP_LOGE(TAG, "Failed to open file for writing");
-            return ESP_FAIL;
-        }
-        i = fprintf(file, "\"%u\",\"%s\",\"%d\",\"%.2f\",\"%.2f\"", time_now, macAddress.c_str(), averageRssi, 
-                                                                      particulateConcentration, maxTemp);
-
-        if(i < 0)
-        {
-            ESP_LOGE(TAG, "Failed to write to opened file");
-            return ESP_FAIL;
-        }
+        
+        ESP_LOGE(TAG, "Failed to open file for writing");
+        return ESP_FAIL;
     }
-    else
+
+    if(!fileExists)
     {
-        file = fopen(fileName, "a");
-        if (file == NULL)
-        {
-            
-            ESP_LOGE(TAG, "Failed to open file for writing");
-            return ESP_FAIL;
-        }
         i = fprintf(file, "\"Unix time\",\"Tag\",\"Mean RSSI\",\"PM 2.5\",\"Max viewable temperature\"\n");
-
         if(i < 0)
         {
             ESP_LOGE(TAG, "Failed to write to opened file");
+            fclose(file);
             return ESP_FAIL;
         }
+
     }
+
+    i = fprintf(file, "\"%u\",\"%s\",\"%d\",\"%.2f\",\"%.2f\"", time_now, macAddress.c_str(), averageRssi, 
+                                                                particulateConcentration, maxTemp);
+    if(i < 0)
+    {
+        ESP_LOGE(TAG, "Failed to write to opened file");
+        fclose(file);
+        return ESP_FAIL;
+    }
+    fflush(file);
+    fclose(file);
     return ESP_OK;
 }
