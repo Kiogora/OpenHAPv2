@@ -104,6 +104,28 @@ extern "C" void app_main()
 #endif
 
     internalHardwareSubsystem::storage::spiFlashFilesystem internalStorage;
+    internalStorage.writeCSVEntry(
+                                  "measurement.csv"
+                                  #ifdef CONFIG_ENABLE_RTC_TEST_HARDWARE_VALIDATION
+                                  ,now
+                                  #else
+                                  ,(std::time_t) 0
+                                  #endif
+                                  /*Not supported yet in hardware validation*/
+                                  , "", -1
+                                  #ifdef CONFIG_ENABLE_PM_SENSOR_TEST_HARDWARE_VALIDATION
+                                  , pollutantConcentration
+                                  #else
+                                  ,0.
+                                  #endif
+                                  #ifdef CONFIG_ENABLE_THERMAL_IMAGER_TEST_HARDWARE_VALIDATION
+                                  , maxThermalTemperature 
+                                  #else
+                                  ,0.
+                                  #endif
+                                );
+    internalStorage.printFilesOnDisk();
+    internalStorage.deleteFile("measurement.csv");
     internalStorage.printFilesOnDisk();
 
 #ifdef CONFIG_ENABLE_DEFAULT_MAC_ADDRESS_RETRIEVAL_HARDWARE_VALIDATION
