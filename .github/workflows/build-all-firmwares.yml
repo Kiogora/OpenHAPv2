@@ -11,6 +11,9 @@ jobs:
     steps:
     - name: Check out repository code
       uses: actions/checkout@v2
+    - name: Cherry pick ESP-IDF commit cbf207bfb8 that adds C++ header guards to <sys/dirent.h>
+      run: docker run espressif/idf:release-v4.3 git cherry-pick cbf207bfb8
+      working-directory: /opt/esp/idf
     - name: Build hardware validation firmware
       run: docker run --env MAINFOLDER=hardwareValidation --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 idf.py build
       working-directory: ./firmware
