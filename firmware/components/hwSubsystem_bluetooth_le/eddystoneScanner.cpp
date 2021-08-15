@@ -16,7 +16,7 @@ static const char *TAG = "internalHardwareSubsystem::bluetooth";
 
 internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner()
 {
-    esp_err_t status;
+    esp_err_t status = ESP_FAIL;
     ESP_LOGI(TAG, "Registration ok");
 
     ESP_ERROR_CHECK(nvs_flash_init());
@@ -28,12 +28,14 @@ internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner()
     esp_bluedroid_init();
     esp_bluedroid_enable();
 
+    status = esp_ble_gap_register_callback(eddystoneScanner_event_callback);
+
     /*<! register the scan event callback function to the gap module */
-    do 
+    while(status != ESP_OK)
     {
-        status = esp_ble_gap_register_callback(eddystoneScanner_event_callback);
         ESP_LOGE(TAG,"gap register error: %s", esp_err_to_name(status));
-    } while(status != ESP_OK);
+        status = esp_ble_gap_register_callback(eddystoneScanner_event_callback);
+    }
 
     esp_ble_scan_params_t ble_scan_params = 
     {
