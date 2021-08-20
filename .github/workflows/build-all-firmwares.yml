@@ -12,12 +12,12 @@ jobs:
     - name: Check out repository code
       uses: actions/checkout@v2
     - name: Build hardware validation firmware while applying
-      run: docker run --env MAINFOLDER=hardwareValidation --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 -c 'git fetch origin && git cherry-pick cbf207bfb8 && cd /usr/src/app/firmware && idf.py build'
+      run: docker run --env MAINFOLDER=hardwareValidation --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 -c 'git fetch origin && git cherry-pick cbf207bfb8 && cd /usr/src/app && idf.py build'
       working-directory:  /opt/esp/idf
     - name: Build normalization/calibration firmware
-      run: docker run --env MAINFOLDER=particulateSensorNormalization --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 -c 'git fetch origin && git cherry-pick cbf207bfb8 && cd /usr/src/app/firmware && idf.py build'
+      run: docker run --env MAINFOLDER=particulateSensorNormalization --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 -c 'git fetch origin && git cherry-pick cbf207bfb8 && cd /usr/src/app && idf.py build'
       working-directory:  /opt/esp/idf
     - name: Build field measurement firmware
-      run: docker run --env MAINFOLDER=particulateSensorNormalization --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 -c 'git fetch origin && git cherry-pick cbf207bfb8 && cd /usr/src/app/firmware && idf.py build'
+      run: docker run --env MAINFOLDER=particulateSensorNormalization --rm -v $PWD:/usr/src/app -w /usr/src/app espressif/idf:release-v4.3 -c 'git fetch origin && git cherry-pick cbf207bfb8 && cd /usr/src/app && idf.py build'
       working-directory:  /opt/esp/idf
       
