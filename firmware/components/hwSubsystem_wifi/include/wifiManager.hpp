@@ -22,9 +22,11 @@ namespace internalHardwareSubsystem
     private:
     /*Access point specifics*/
     static void accessPointEventHandler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
+
     /*DNS query based captive portal*/
     void startCaptivePortal();
     static void dnsRedirectionTask(void*);
+
     /*File server specifics from this point*/
     static constexpr int SCRATCH_BUFSIZE = 8192;
     struct file_server_data 

@@ -124,13 +124,6 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
         return ESP_FAIL;
     }
 
-    httpd_uri_t file_download = {
-        .uri       = "/*",  // Match all URIs of type /path/to/file
-        .method    = HTTP_GET,
-        .handler   = download_get_handler,
-        .user_ctx  = server_data    // Pass server data as context
-    };
-
     /* URI handler for getting uploaded files */
     httpd_uri_t file_download = {
         .uri       = "/*",  // Match all URIs of type /path/to/file
@@ -150,6 +143,7 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
     httpd_register_uri_handler(server, &file_delete);
 
     startCaptivePortal();
+    startMDNS();
 
     return ESP_OK;
 }
@@ -169,6 +163,50 @@ void internalHardwareSubsystem::wifi::wifiManager::accessPointEventHandler(void*
     }
 }
 
+// void internalHardwareSubsystem::wifi::wifiManager::tcpRedirectionTask(void*)
+// {
+//     struct sockaddr_storage client_addr;
+
+//     tcpip_adapter_ip_info_t ip;
+//     tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip);
+
+//     struct sockaddr_in *dest_addr_ip4 = (struct sockaddr_in *)&client_addr;
+//     dest_addr_ip4->sin_addr.s_addr = htonl(INADDR_ANY);
+//     dest_addr_ip4->sin_family = AF_INET;
+//     dest_addr_ip4->sin_port = htons(80);
+    
+//     int ip_protocol = IPPROTO_IP;
+
+//     int listen_sock = socket(AF_INET SOCK_STREAM, ip_protocol);
+//     if (listen_sock < 0) 
+//     {
+//         ESP_LOGE(TAG, "Unable to create TCP socket: errno %d", errno);
+//         vTaskDelete(NULL);
+//         return;
+//     }
+
+//     int opt = 1;
+//     setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+//     ESP_LOGI(TAG, "TCP Socket created");
+
+//     int err = bind(listen_sock, (struct sockaddr *)&client_addr, sizeof(client_addr));
+//     if (err != 0)
+//     {
+//         ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
+//         ESP_LOGE(TAG, "IPPROTO: %d", addr_family);
+//         goto CLEAN_UP;
+//     }
+//     ESP_LOGI(TAG, "Socket bound, port %d", PORT);
+
+//     int backlog = 1;
+//     err = listen(listen_sock, backlog);
+//     if (err != 0)
+//     {
+//         ESP_LOGE(TAG, "Error occurred during listen: errno %d", errno);
+//         goto CLEAN_UP;
+//     }
+// }
+
 void internalHardwareSubsystem::wifi::wifiManager::dnsRedirectionTask(void*)
 {
     int socket_fd;
@@ -178,7 +216,8 @@ void internalHardwareSubsystem::wifi::wifiManager::dnsRedirectionTask(void*)
     if (socket_fd < 0)
     {
         ESP_LOGE(TAG, "Failed to create socket");
-        exit(0);
+        vTaskDelete(NULL);
+        return;
     }
 
     memset(&sa, 0, sizeof(struct sockaddr_in));
@@ -192,7 +231,8 @@ void internalHardwareSubsystem::wifi::wifiManager::dnsRedirectionTask(void*)
     {
         ESP_LOGE(TAG, "Failed to bind to 53/udp");
         close(socket_fd);
-        exit(1);
+        vTaskDelete(NULL);
+        return;
     }
 
     struct sockaddr_in client;
