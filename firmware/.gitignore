@@ -1,2 +1,3 @@
 build
 components/hwSubsystem_particulateSensor/include/correction_factors.hpp
+*.pem
