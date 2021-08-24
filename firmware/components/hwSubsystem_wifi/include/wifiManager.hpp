@@ -23,9 +23,8 @@ namespace internalHardwareSubsystem
     /*Access point specifics*/
     static void accessPointEventHandler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
 
-    /*DNS query based captive portal*/
-    void startCaptivePortal();
-    static void dnsRedirectionTask(void*);
+    /*Starts local DNS server*/
+    esp_err_t startMDNS();
 
     /*File server specifics from this point*/
     static constexpr int SCRATCH_BUFSIZE = 8192;

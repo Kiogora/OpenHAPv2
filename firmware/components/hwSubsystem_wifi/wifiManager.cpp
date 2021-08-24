@@ -24,6 +24,8 @@
 #include "esp_spiffs.h"
 #include "esp_http_server.h"
 
+#include "mdns.h"
+
 #include "wifiManager.hpp"
 
 static const char* TAG = "internalHardwareSubsystem::wifi";
@@ -76,7 +78,7 @@ internalHardwareSubsystem::wifi::wifiManager::wifiManager(supportedWifiModes sta
         wifi_config.ap.ssid_len = strlen(ssid);
         wifi_config.ap.channel = 6;
         strcpy((char*)wifi_config.ap.password, "");;
-        wifi_config.ap.max_connection = 1;
+        wifi_config.ap.max_connection = 3;
         wifi_config.ap.authmode = WIFI_AUTH_OPEN;
 
         ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
@@ -142,7 +144,7 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
     };
     httpd_register_uri_handler(server, &file_delete);
 
-    startCaptivePortal();
+    //startCaptivePortal();
     startMDNS();
 
     return ESP_OK;
@@ -163,163 +165,33 @@ void internalHardwareSubsystem::wifi::wifiManager::accessPointEventHandler(void*
     }
 }
 
-// void internalHardwareSubsystem::wifi::wifiManager::tcpRedirectionTask(void*)
-// {
-//     struct sockaddr_storage client_addr;
-
-//     tcpip_adapter_ip_info_t ip;
-//     tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip);
-
-//     struct sockaddr_in *dest_addr_ip4 = (struct sockaddr_in *)&client_addr;
-//     dest_addr_ip4->sin_addr.s_addr = htonl(INADDR_ANY);
-//     dest_addr_ip4->sin_family = AF_INET;
-//     dest_addr_ip4->sin_port = htons(80);
-    
-//     int ip_protocol = IPPROTO_IP;
-
-//     int listen_sock = socket(AF_INET SOCK_STREAM, ip_protocol);
-//     if (listen_sock < 0) 
-//     {
-//         ESP_LOGE(TAG, "Unable to create TCP socket: errno %d", errno);
-//         vTaskDelete(NULL);
-//         return;
-//     }
-
-//     int opt = 1;
-//     setsockopt(listen_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-//     ESP_LOGI(TAG, "TCP Socket created");
-
-//     int err = bind(listen_sock, (struct sockaddr *)&client_addr, sizeof(client_addr));
-//     if (err != 0)
-//     {
-//         ESP_LOGE(TAG, "Socket unable to bind: errno %d", errno);
-//         ESP_LOGE(TAG, "IPPROTO: %d", addr_family);
-//         goto CLEAN_UP;
-//     }
-//     ESP_LOGI(TAG, "Socket bound, port %d", PORT);
-
-//     int backlog = 1;
-//     err = listen(listen_sock, backlog);
-//     if (err != 0)
-//     {
-//         ESP_LOGE(TAG, "Error occurred during listen: errno %d", errno);
-//         goto CLEAN_UP;
-//     }
-// }
-
-void internalHardwareSubsystem::wifi::wifiManager::dnsRedirectionTask(void*)
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::startMDNS()
 {
-    int socket_fd;
-    struct sockaddr_in sa, ra;
-
-    socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
-    if (socket_fd < 0)
+    esp_err_t ret = mdns_init();
+    if(ret!= ESP_OK)
     {
-        ESP_LOGE(TAG, "Failed to create socket");
-        vTaskDelete(NULL);
-        return;
+        return ret;
+    }
+    /*set mDNS hostname (required if you want to advertise services)*/
+    ret = mdns_hostname_set("openhap" );
+    if(ret!= ESP_OK)
+    {
+        return ret;
+    }
+    /*set default mDNS instance name*/
+    mdns_instance_name_set("Openhap datalogger");
+    if(ret!= ESP_OK)
+    {
+        return ret;
+    }
+    /*Initialize service*/
+    mdns_service_add("Openhap-WebServer", "_http", "_tcp", 80, NULL, 0);
+    if(ret!= ESP_OK)
+    {
+        return ret;
     }
 
-    memset(&sa, 0, sizeof(struct sockaddr_in));
-
-    tcpip_adapter_ip_info_t ip;
-    tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_AP, &ip);
-    ra.sin_family = AF_INET;
-    ra.sin_addr.s_addr = ip.ip.addr;
-    ra.sin_port = htons(53);
-    if (bind(socket_fd, (struct sockaddr *)&ra, sizeof(struct sockaddr_in)) == -1)
-    {
-        ESP_LOGE(TAG, "Failed to bind to 53/udp");
-        close(socket_fd);
-        vTaskDelete(NULL);
-        return;
-    }
-
-    struct sockaddr_in client;
-    socklen_t client_len;
-    client_len = sizeof(client);
-    int length;
-    char data[80];
-    char response[100];
-    char ipAddress[INET_ADDRSTRLEN];
-    int idx;
-    int err;
-
-    ESP_LOGI(TAG, "DNS Server listening on 53/udp");
-    while (1)
-    {
-        length = recvfrom(socket_fd, data, sizeof(data), 0, (struct sockaddr *)&client, &client_len);
-        if (length > 0)
-        {
-            data[length] = '\0';
-
-            inet_ntop(AF_INET, &(client.sin_addr), ipAddress, INET_ADDRSTRLEN);
-            ESP_LOGI(TAG, "Replying to DNS request (len=%d) from %s", length, ipAddress);
-
-            // Prepare our response
-            response[0] = data[0];
-            response[1] = data[1];
-            response[2] = 0b10000100 | (0b00000001 & data[2]); //response, authorative answer, not truncated, copy the recursion bit
-            response[3] = 0b00000000; //no recursion available, no errors
-            response[4] = data[4];
-            response[5] = data[5]; //Question count
-            response[6] = data[4];
-            response[7] = data[5]; //answer count
-            response[8] = 0x00;
-            response[9] = 0x00;       //NS record count
-            response[10]= 0x00;
-            response[11]= 0x00;       //Resource record count
-
-            memcpy(response+12, data+12, length-12); //Copy the rest of the query section
-            idx = length;
-
-            // Prune off the OPT
-            if ((response[idx-11] == 0x00) && (response[idx-10] == 0x00) && (response[idx-9] == 0x29))
-            {
-                idx -= 11;
-            }
-
-            //Set a pointer to the domain name in the question section
-            response[idx] = 0xC0;
-            response[idx+1] = 0x0C;
-
-            //Set the type to "Host Address"
-            response[idx+2] = 0x00;
-            response[idx+3] = 0x01;
-
-            //Set the response class to IN
-            response[idx+4] = 0x00;
-            response[idx+5] = 0x01;
-
-            //A 32 bit integer specifying TTL in seconds, 0 means no caching
-            response[idx+6] = 0x00;
-            response[idx+7] = 0x00;
-            response[idx+8] = 0x00;
-            response[idx+9] = 0x00;
-
-            //RDATA length
-            response[idx+10] = 0x00;
-            response[idx+11] = 0x04; //4 byte IP address
-
-            //The IP address of the ESP32 server at 192.168.4.1
-            response[idx + 12] = 192;
-            response[idx + 13] = 168;
-            response[idx + 14] = 4;
-            response[idx + 15] = 1;
-
-            err = sendto(socket_fd, response, idx+16, 0, (struct sockaddr *)&client, client_len);
-            if (err < 0) 
-            {
-                ESP_LOGE(TAG, "sendto failed: %s", strerror(errno));
-            }
-        }
-    }
-    close(socket_fd);
-}
-
-void internalHardwareSubsystem::wifi::wifiManager::startCaptivePortal()
-{
-    xTaskCreate(&dnsRedirectionTask, "receive_thread", 3048, NULL, 5, NULL);
+    return ESP_OK;
 }
 
 /* Handler to redirect incoming GET request for /index.html to /
