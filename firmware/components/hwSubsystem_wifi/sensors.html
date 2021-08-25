@@ -1,0 +1,48 @@
+<table class="fixed" border="2">
+	<table class="fixed" border="2">
+		<col width="300px"/><col width="300px"/>
+		<thead><tr><th><a href="/files/">View files</a></th><th><a href="/sensors/">View sensors</a></th></tr></thead>
+	</table>
+	<table class="fixed" border="2">
+		<col width="1500px"	/>
+		<tr>
+			<td>
+				<h2>OpenHAP Sensor Viewer</h2>
+			</td>
+		</tr>
+	</table>
+</table>
+<p id="t-max"></p>
+<script>
+var audio = new Audio('/notification.mp3')
+
+const SOCKET_URL = "ws://openhap.local/ws"
+var websocketInst = new WebSocket(SOCKET_URL);
+
+var timeoutFlag;
+
+websocketInst.onopen = function (evt) {
+    console.log("Connection open");
+	console.log(evt);
+	timeoutFlag = setInterval(function() { websocketInst.send("sample");}, 5000 );
+};
+websocketInst.onmessage = function (evt) {
+	audio.play();
+	try {
+		var response = JSON.parse(evt.data);
+		//console.log(response.maxTemp);
+    	document.getElementById("t-max").innerHTML = response.maxTemp;
+	} catch(error) {
+		document.getElementById("t-max").innerHTML = "undefined";
+	}
+};
+websocketInst.onerror = function (evt) {
+	console.log("Error");
+    console.log(evt);
+};
+websocketInst.onclose = function (evt) {
+	clearInterval(timeoutFlag);
+	console.log("Connection closed");
+    console.log(evt);
+};
+</script>

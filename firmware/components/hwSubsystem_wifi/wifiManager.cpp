@@ -25,6 +25,10 @@
 #include "esp_http_server.h"
 
 #include "mdns.h"
+#include "cJSON.h"
+
+#include "mlx90641.hpp"
+#include <algorithm>
 
 #include "wifiManager.hpp"
 
@@ -89,24 +93,27 @@ internalHardwareSubsystem::wifi::wifiManager::wifiManager(supportedWifiModes sta
 
 esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string filesystemMountPoint)
 {
-    static struct file_server_data *server_data = NULL;
+    static struct server_data *server_data = NULL;
 
     const char* base_path = filesystemMountPoint.c_str();
 
     /* Validate file storage base path */
-    if (!base_path || strcmp(base_path, "/spiffs") != 0) {
+    if (!base_path || strcmp(base_path, "/spiffs") != 0)
+    {
         ESP_LOGE(TAG, "File server presently supports only '/spiffs' as base path");
         return ESP_ERR_INVALID_ARG;
     }
 
-    if (server_data) {
+    if (server_data)
+    {
         ESP_LOGE(TAG, "File server already started");
         return ESP_ERR_INVALID_STATE;
     }
 
     /* Allocate memory for server data */
-    server_data = (struct file_server_data*) calloc(1, sizeof(struct file_server_data));
-    if (!server_data) {
+    server_data = (struct server_data*) calloc(1, sizeof(struct server_data));
+    if (!server_data)
+    {
         ESP_LOGE(TAG, "Failed to allocate memory for server data");
         return ESP_ERR_NO_MEM;
     }
@@ -119,16 +126,21 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
      * allow the same handler to respond to multiple different
      * target URIs which match the wildcard scheme */
     config.uri_match_fn = httpd_uri_match_wildcard;
+    config.stack_size = 16384;
+    config.open_fn = on_open_sock;
+    config.close_fn = on_close_sock;
 
     ESP_LOGI(TAG, "Starting HTTP Server on port: '%d'", config.server_port);
-    if (httpd_start(&server, &config) != ESP_OK) {
-        ESP_LOGE(TAG, "Failed to start file server!");
+    if (httpd_start(&server, &config) != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to start server!");
         return ESP_FAIL;
     }
 
     /* URI handler for getting uploaded files */
-    httpd_uri_t file_download = {
-        .uri       = "/*",  // Match all URIs of type /path/to/file
+    httpd_uri_t file_download = 
+    {
+        .uri       = "/files/*",  // Match all URIs of type /path/to/file
         .method    = HTTP_GET,
         .handler   = download_get_handler,
         .user_ctx  = server_data    // Pass server data as context
@@ -136,7 +148,8 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
     httpd_register_uri_handler(server, &file_download);
 
     /* URI handler for deleting files from server */
-    httpd_uri_t file_delete = {
+    httpd_uri_t file_delete = 
+    {
         .uri       = "/delete/*",   // Match all URIs of type /delete/path/to/file
         .method    = HTTP_POST,
         .handler   = delete_post_handler,
@@ -144,7 +157,67 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
     };
     httpd_register_uri_handler(server, &file_delete);
 
-    //startCaptivePortal();
+    /* URI handler for deleting files from server */
+    httpd_uri_t root = 
+    {
+        .uri       = "/",   
+        .method    = HTTP_GET,
+        .handler   = index_html_get_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &root);
+
+        /* URI handler for deleting files from server */
+    httpd_uri_t index_html = 
+    {
+        .uri       = "/index.html",
+        .method    = HTTP_GET,
+        .handler   = index_html_get_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &index_html);
+
+        /* URI handler for deleting files from server */
+    httpd_uri_t favicon = 
+    {
+        .uri       = "/favicon.ico",
+        .method    = HTTP_GET,
+        .handler   = favicon_get_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &favicon);
+
+    httpd_uri_t mp3 = 
+    {
+        .uri       = "/notification.mp3",
+        .method    = HTTP_GET,
+        .handler   = mp3_get_handler,
+        .user_ctx  = NULL
+    };
+    httpd_register_uri_handler(server, &mp3);
+
+    /* URI handler for deleting files from server */
+    httpd_uri_t sensor_view = 
+    {
+        .uri       = "/sensors/",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_GET,
+        .handler   = sensor_view_handler,
+        .user_ctx   = NULL,
+    };
+    httpd_register_uri_handler(server, &sensor_view);
+
+    /* URI handler for deleting files from server */
+    httpd_uri_t websockets = 
+    {
+        .uri       = "/ws",   // Match all URIs of type /delete/path/to/file
+        .method    = HTTP_GET,
+        .handler   = websocket_handler,
+        .user_ctx   = NULL,
+        .is_websocket = true,
+        .handle_ws_control_frames = true
+    };
+    httpd_register_uri_handler(server, &websockets);
+
     startMDNS();
 
     return ESP_OK;
@@ -194,12 +267,101 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startMDNS()
     return ESP_OK;
 }
 
-/* Handler to redirect incoming GET request for /index.html to /
- * This can be overridden by uploading file with same name */
+/*Socket specific open close handlers*/
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::on_open_sock(httpd_handle_t hd, int sockfd)
+{
+    ESP_LOGI(TAG, "Socket has been opened");
+    return ESP_OK;
+}
+void internalHardwareSubsystem::wifi::wifiManager::on_close_sock(httpd_handle_t hd, int sockfd)
+{
+    ESP_LOGI(TAG, "Socket has been closed");
+}
+
+void internalHardwareSubsystem::wifi::wifiManager::ws_async_send(void *arg)
+{
+    struct async_resp_arg *resp_arg = (struct async_resp_arg *)arg;
+    httpd_handle_t hd = resp_arg->hd;
+    int fd = resp_arg->fd;
+
+    externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager;
+    const float* imageBuffer = thermalImager.GetImage();
+    float maxThermalTemperature = *std::max_element(imageBuffer, imageBuffer+thermalImager.pixelCount);
+    
+    cJSON *response = cJSON_CreateObject();
+    if (response  == NULL){ cJSON_Delete(response);}
+    cJSON *maxTemp = cJSON_AddNumberToObject(response, "maxTemp", maxThermalTemperature);
+    if (maxTemp  == NULL){ cJSON_Delete(response);}
+    char* response_string = cJSON_Print(response);
+
+    httpd_ws_frame_t ws_pkt;
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.payload = (uint8_t*)response_string;
+    ws_pkt.len = strlen(response_string);
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+
+    httpd_ws_send_frame_async(hd, fd, &ws_pkt);
+    cJSON_Delete(response);
+    free(resp_arg);
+}
+
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::trigger_async_send(httpd_handle_t handle, httpd_req_t *req)
+{
+    struct async_resp_arg *resp_arg = (struct async_resp_arg *)malloc(sizeof(struct async_resp_arg));
+    resp_arg->hd = req->handle;
+    resp_arg->fd = httpd_req_to_sockfd(req);
+    return httpd_queue_work(handle, ws_async_send, resp_arg);
+}
+
+/* Handler to handle incoming websocket data from connected client*/
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::websocket_handler(httpd_req_t *req)
+{
+    if (req->method == HTTP_GET)
+    {
+        ESP_LOGI(TAG, "Handshake done, the new connection was opened");
+        return ESP_OK;
+    }
+    httpd_ws_frame_t ws_pkt;
+    uint8_t buf[128] = { 0 };
+    
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.payload = buf;
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+    
+    esp_err_t ret = httpd_ws_recv_frame(req, &ws_pkt, 128);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "httpd_ws_recv_frame failed to get frame len with %d", ret);
+        return ESP_FAIL;
+    }
+    ESP_LOGI(TAG, "Got packet with message: %s", ws_pkt.payload);
+    ESP_LOGI(TAG, "Packet type: %d", ws_pkt.type);
+
+    if(strcmp((const char*)ws_pkt.payload, "sample") == 0)
+    {
+        return trigger_async_send(req->handle, req);
+    }
+    return ESP_OK;
+}
+
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::sensor_view_handler(httpd_req_t *req)
+{
+    /* Get handle to embedded file upload script */
+    extern const unsigned char sensors_html_start[] asm("_binary_sensors_html_start");
+    extern const unsigned char sensors_html_end[]   asm("_binary_sensors_html_end");
+    const size_t sensors_html_size = (sensors_html_end - sensors_html_start);
+
+    /* Add file upload form and script which on execution sends a POST request to /upload */
+    httpd_resp_send_chunk(req, (const char *)sensors_html_start, sensors_html_size);
+    return ESP_OK;
+}
+
+/* Handler to redirect incoming GET request for /index.html*/
 esp_err_t internalHardwareSubsystem::wifi::wifiManager::index_html_get_handler(httpd_req_t *req)
 {
+    ESP_LOGI(TAG, "Index handler");
     httpd_resp_set_status(req, "307 Temporary Redirect");
-    httpd_resp_set_hdr(req, "Location", "/");
+    httpd_resp_set_hdr(req, "Location", "/files/");
     httpd_resp_send(req, NULL, 0);  // Response body can be empty
     return ESP_OK;
 }
@@ -209,12 +371,23 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::index_html_get_handler(h
  * This can be overridden by uploading file with same name */
 esp_err_t internalHardwareSubsystem::wifi::wifiManager::favicon_get_handler(httpd_req_t *req)
 {
+    ESP_LOGI(TAG, "favicon handler");
     extern const unsigned char favicon_ico_start[] asm("_binary_favicon_ico_start");
     extern const unsigned char favicon_ico_end[]   asm("_binary_favicon_ico_end");
     const size_t favicon_ico_size = (favicon_ico_end - favicon_ico_start);
     httpd_resp_set_type(req, "image/x-icon");
     httpd_resp_send(req, (const char *)favicon_ico_start, favicon_ico_size);
     return ESP_OK;
+}
+
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::mp3_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char mp3_start[] asm("_binary_notification_mp3_start");
+    extern const unsigned char mp3_end[]   asm("_binary_notification_mp3_end");
+    const size_t mp3_size = (mp3_end - mp3_start);
+    httpd_resp_set_type(req, "audio/mpeg");
+    httpd_resp_send(req, (const char *)mp3_start, mp3_size);
+    return ESP_OK;  
 }
 
 /* Send HTTP response with a run-time generated html consisting of
@@ -247,19 +420,16 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
     /* Send HTML file header */
     httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body>");
 
-    /* Get handle to embedded file upload script */
-    extern const unsigned char upload_script_start[] asm("_binary_upload_script_html_start");
-    extern const unsigned char upload_script_end[]   asm("_binary_upload_script_html_end");
-    const size_t upload_script_size = (upload_script_end - upload_script_start);
-
-    /* Add file upload form and script which on execution sends a POST request to /upload */
-    httpd_resp_send_chunk(req, (const char *)upload_script_start, upload_script_size);
+    extern const unsigned char index_html_start[] asm("_binary_index_html_start");
+    extern const unsigned char index_html_end[]   asm("_binary_index_html_end");
+    const size_t index_html_size = (index_html_end - index_html_start);
+    httpd_resp_send_chunk(req, (const char *)index_html_start, index_html_size);
 
     /* Send file-list table definition and column labels */
     httpd_resp_sendstr_chunk(req,
         "<table class=\"fixed\" border=\"1\">"
         "<col width=\"800px\" /><col width=\"300px\" /><col width=\"300px\" /><col width=\"100px\" />"
-        "<thead><tr><th>Name</th><th>Type</th><th>Size (Bytes)</th><th>Delete</th></tr></thead>"
+        "<thead><tr><th>Name</th><th>Type</th><th>Size (Megabytes)</th><th>Delete</th></tr></thead>"
         "<tbody>");
 
     /* Iterate over all files / folders and fetch their names and sizes */
@@ -271,14 +441,15 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
             ESP_LOGE(TAG, "Failed to stat %s : %s", entrytype, entry->d_name);
             continue;
         }
-        sprintf(entrysize, "%ld", entry_stat.st_size);
-        ESP_LOGI(TAG, "Found %s : %s (%s bytes)", entrytype, entry->d_name, entrysize);
+        sprintf(entrysize, "%.2f", entry_stat.st_size/(1024.*1024.));
+        ESP_LOGI(TAG, "Found %s : %s (%f Megabytes)", entrytype, entry->d_name, entry_stat.st_size/(1024.*1024.));
 
         /* Send chunk of HTML file containing table entries with file name and size */
         httpd_resp_sendstr_chunk(req, "<tr><td><a href=\"");
         httpd_resp_sendstr_chunk(req, req->uri);
         httpd_resp_sendstr_chunk(req, entry->d_name);
-        if (entry->d_type == DT_DIR) {
+        if (entry->d_type == DT_DIR)
+        {
             httpd_resp_sendstr_chunk(req, "/");
         }
         httpd_resp_sendstr_chunk(req, "\">");
@@ -288,7 +459,7 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
         httpd_resp_sendstr_chunk(req, "</td><td>");
         httpd_resp_sendstr_chunk(req, entrysize);
         httpd_resp_sendstr_chunk(req, "</td><td>");
-        httpd_resp_sendstr_chunk(req, "<form method=\"post\" action=\"/delete");
+        httpd_resp_sendstr_chunk(req, "<form method=\"post\" action=\"/files/delete");
         httpd_resp_sendstr_chunk(req, req->uri);
         httpd_resp_sendstr_chunk(req, entry->d_name);
         httpd_resp_sendstr_chunk(req, "\"><button type=\"submit\">Delete</button></form>");
@@ -316,14 +487,25 @@ static inline bool is_file_extension(const char* filename, const char* ext)
 /* Set HTTP response content type according to file extension */
 esp_err_t internalHardwareSubsystem::wifi::wifiManager::set_content_type_from_file(httpd_req_t *req, const char *filename)
 {
-    if (is_file_extension(filename, ".pdf")) {
+    if (is_file_extension(filename, ".pdf"))
+    {
         return httpd_resp_set_type(req, "application/pdf");
-    } else if (is_file_extension(filename, ".html")) {
+    }
+    else if (is_file_extension(filename, ".html"))
+    {
         return httpd_resp_set_type(req, "text/html");
-    } else if (is_file_extension(filename, ".jpeg")) {
+    }
+    else if (is_file_extension(filename, ".jpeg"))
+    {
         return httpd_resp_set_type(req, "image/jpeg");
-    } else if (is_file_extension(filename, ".ico")) {
+    }
+    else if (is_file_extension(filename, ".ico"))
+    {
         return httpd_resp_set_type(req, "image/x-icon");
+    }
+    else if (is_file_extension(filename, ".mp3"))
+    {
+        return httpd_resp_set_type(req, "audio/mpeg");
     }
     /* This is a limited set only */
     /* For any other type always set as plain text */
@@ -368,9 +550,10 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::download_get_handler(htt
     FILE *fd = NULL;
     struct stat file_stat;
 
-    const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
-                                             req->uri, sizeof(filepath));
-    if (!filename) {
+    const char *filename = get_path_from_uri(filepath, ((struct server_data *)req->user_ctx)->base_path,
+                                             req->uri + sizeof("/files") - 1, sizeof(filepath));
+    if (!filename)
+    {
         ESP_LOGE(TAG, "Filename is too long");
         /* Respond with 500 Internal Server Error */
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
@@ -378,18 +561,13 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::download_get_handler(htt
     }
 
     /* If name has trailing '/', respond with directory contents */
-    if (filename[strlen(filename) - 1] == '/') {
+    if (filename[strlen(filename) - 1] == '/')
+    {
         return http_resp_dir_html(req, filepath);
-    }
+    }   
 
-    if (stat(filepath, &file_stat) == -1) {
-        /* If file not present on SPIFFS check if URI
-         * corresponds to one of the hardcoded paths */
-        if (strcmp(filename, "/index.html") == 0) {
-            return index_html_get_handler(req);
-        } else if (strcmp(filename, "/favicon.ico") == 0) {
-            return favicon_get_handler(req);
-        }
+    if (stat(filepath, &file_stat) == -1)
+    {
         ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
         /* Respond with 404 Not Found */
         httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "File does not exist");
@@ -408,7 +586,7 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::download_get_handler(htt
     set_content_type_from_file(req, filename);
 
     /* Retrieve the pointer to scratch buffer for temporary storage */
-    char *chunk = ((struct file_server_data *)req->user_ctx)->scratch;
+    char *chunk = ((struct server_data *)req->user_ctx)->scratch;
     size_t chunksize;
     do {
         /* Read file in chunks into the scratch buffer */
@@ -450,9 +628,10 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::delete_post_handler(http
 
     /* Skip leading "/delete" from URI to get filename */
     /* Note sizeof() counts NULL termination hence the -1 */
-    const char *filename = get_path_from_uri(filepath, ((struct file_server_data *)req->user_ctx)->base_path,
-                                             req->uri  + sizeof("/delete") - 1, sizeof(filepath));
-    if (!filename) {
+    const char *filename = get_path_from_uri(filepath, ((struct server_data *)req->user_ctx)->base_path,
+                                             req->uri  + sizeof("/files/delete") - 1, sizeof(filepath));
+    if (!filename)
+    {
         /* Respond with 500 Internal Server Error */
         httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "Filename too long");
         return ESP_FAIL;

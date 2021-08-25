@@ -17,6 +17,7 @@ extern "C" void app_main()
     internalStorage.printFilesOnDisk();
     /*Setup eddystone scanner*/
     internalHardwareSubsystem::bluetooth::eddystoneScanner activityDetector;
+
     /*Setup wifi access point*/
     internalHardwareSubsystem::wifi::wifiManager wifiSetup;
     /*Setup server on port 80 within wifi network - accessible via 192.168.4.1*/
