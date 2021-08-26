@@ -132,8 +132,6 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(
     strlcpy(pathQualifiedFilename, root, sizeof(pathQualifiedFilename));
     strlcpy(pathQualifiedFilename+rootLen, fileName, sizeof(pathQualifiedFilename)-rootLen);
 
-    ESP_LOGI(TAG, "Measurement file is %s", "/spiffs/hellb.txt");
-
     /*Open file by append mode, if file does not exist, create it*/
     if (stat(pathQualifiedFilename, &st) == 0)
     {
@@ -154,6 +152,7 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(
 
     if(!fileExists)
     {
+        ESP_LOGI(TAG, "Writing CSV header to %S", fileName);
         i = fprintf(file, "\"Unix time\",\"Tag\",\"Mean RSSI\",\"PM 2.5\",\"Max viewable temperature\"\n");
         if(i < 0)
         {
@@ -164,6 +163,7 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(
         fflush(file);
     }      
 
+    ESP_LOGI(TAG, "Writing CSV data to %S", fileName);
     i = fprintf(file, "\"%u\",\"%s\",\"%d\",\"%.2f\",\"%.2f\"", (uint32_t) time_now, macAddress.c_str(), averageRssi, 
                                                                 particulateConcentration, maxTemp);
     if(i < 0)
