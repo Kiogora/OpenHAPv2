@@ -152,7 +152,7 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(
 
     if(!fileExists)
     {
-        ESP_LOGI(TAG, "Writing CSV header to %S", fileName);
+        ESP_LOGI(TAG, "Writing CSV header to %s", fileName);
         i = fprintf(file, "\"Unix time\",\"Tag\",\"Mean RSSI\",\"PM 2.5\",\"Max viewable temperature\"\n");
         if(i < 0)
         {
