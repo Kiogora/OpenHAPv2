@@ -18,7 +18,8 @@ namespace externalHardwareSubsystem
     static constexpr uint32_t dataIntervalMs{1000};
 
     static constexpr int activeReportingMeasurementLength{10};
-    static constexpr int readBufferByteSize{(measurementStabilityMs/dataIntervalMs)*activeReportingMeasurementLength};
+    static constexpr int packetsToAverage{3};
+    static constexpr int readBufferByteSize{10*activeReportingMeasurementLength};
     
     static constexpr uint32_t defaultBaudrate{9600};
 
@@ -27,6 +28,8 @@ namespace externalHardwareSubsystem
     static_assert(recommendedQueryDelayMs == 3000U, "Minimum sampling interval not default. Check: Laser_Dust_Sensor_Control_Protocol_V1.3 PDF");
     static_assert(measurementStabilityMs == 30000U, "Data stability delay is not default. Check: Laser_Dust_Sensor_Control_Protocol_V1.3 PDF");
     static_assert(dataIntervalMs== 1000U, "Serial data output interval not default. Check: Laser PM2.5 Sensor specification PDF");
+
+    static_assert(readBufferByteSize/activeReportingMeasurementLength > packetsToAverage, "Buffer will collect less packets than needed to average");
         
     externalHardwareInterface::gpio powerState;
 
