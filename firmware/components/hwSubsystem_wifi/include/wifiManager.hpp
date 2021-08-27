@@ -6,6 +6,13 @@
 #include "esp_event.h"
 #include "esp_http_server.h"
 
+#include "gpio.hpp"
+#include "ds3231.hpp"
+#include "sds011.hpp"
+#include "mlx90641.hpp"
+#include "internalFlash.hpp"
+#include "eddystoneScanner.hpp"
+
 namespace internalHardwareSubsystem
 {
     namespace wifi
@@ -18,7 +25,12 @@ namespace internalHardwareSubsystem
     /*Constructor method*/
     wifiManager(supportedWifiModes startupMode = supportedWifiModes::accessPointMode);
     /*Server start method*/
-    esp_err_t startServer(std::string filesystemMountPoint);
+    esp_err_t startServer(internalHardwareSubsystem::bluetooth::eddystoneScanner &bleScanner,
+                          internalHardwareSubsystem::storage::spiFlashFilesystem &storage,
+                          externalHardwareSubsystem::thermalImaging::MLX90641 &thermalImager,
+                          externalHardwareSubsystem::timekeeping::DS3231 &ds3231,
+                          externalHardwareSubsystem::particulateSensor::SDS011 &particulateSensor,
+                          externalHardwareInterface::gpio &warningLed);
     private:
     /*Access point specifics*/
     static void accessPointEventHandler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
@@ -31,14 +43,28 @@ namespace internalHardwareSubsystem
     static void on_close_sock(httpd_handle_t hd, int sockfd);
 
     /*Websocket specific for (a)synchronous send*/
-    struct async_resp_arg
+    struct async_resp_arg_sensor_data
     {
         httpd_handle_t hd;
         int fd;
+        externalHardwareSubsystem::thermalImaging::MLX90641* thermalImagerRef;
+        externalHardwareSubsystem::timekeeping::DS3231* ds3231Ref;
+        externalHardwareSubsystem::particulateSensor::SDS011* particulateSensorRef;
+        externalHardwareInterface::gpio* warningLedRef;
     };
-    static void ws_async_send(void *arg);
-    static esp_err_t trigger_async_send(httpd_handle_t handle, httpd_req_t *req);
+
+    struct async_resp_arg_ble_data
+    {
+        httpd_handle_t hd;
+        int fd;
+        internalHardwareSubsystem::bluetooth::eddystoneScanner* bleScannerRef;
+    };
+    static void ws_async_send_sensor_data(void *arg);
+    static void ws_async_send_ble_data(void *arg);
+    static esp_err_t trigger_async_send_sensor_data(httpd_handle_t handle, httpd_req_t *req);
+    static esp_err_t trigger_async_send_ble_data(httpd_handle_t handle, httpd_req_t *req);
     static esp_err_t websocket_handler(httpd_req_t *req);
+    static esp_err_t ble_view_handler(httpd_req_t *req);
     static esp_err_t sensor_view_handler(httpd_req_t *req);
 
     /*File server specifics from this point*/
@@ -49,11 +75,19 @@ namespace internalHardwareSubsystem
         char base_path[ESP_VFS_PATH_MAX + 1];
         /* Scratch buffer for temporary storage during file transfer */
         char scratch[SCRATCH_BUFSIZE];
+        /*Peripherals accessible to server callback functions*/
+        internalHardwareSubsystem::bluetooth::eddystoneScanner* bleScannerRef;
+        internalHardwareSubsystem::storage::spiFlashFilesystem* storageRef;
+        externalHardwareSubsystem::thermalImaging::MLX90641*     thermalImagerRef;
+        externalHardwareSubsystem::timekeeping::DS3231* ds3231Ref;
+        externalHardwareSubsystem::particulateSensor::SDS011* particulateSensorRef;
+        externalHardwareInterface::gpio* warningLedRef;
     };
 
     static esp_err_t index_html_get_handler(httpd_req_t *req);
     static esp_err_t favicon_get_handler(httpd_req_t *req);
     static esp_err_t mp3_get_handler(httpd_req_t *req);
+    static esp_err_t plotter_get_handler(httpd_req_t *req);
     static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath);
     static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filename);
     static const char* get_path_from_uri(char *dest, const char *base_path, const char *uri, size_t destsize);

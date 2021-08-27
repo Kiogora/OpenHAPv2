@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="d3.min.js"></script>
+
+<!-- Create a div where the graph will take place -->
+<div id="container"></div>
+
+<script>
+
+// This each subarray will render as a row
+const data = [[24.426722,23.854456,24.072382,23.834467,24.073084,24.109674,23.820917,23.999720,23.836969,23.945063,23.801813,23.814539,23.670221,23.646448,23.612207,23.940302],
+[24.486292,24.022943,23.996943,24.049189,24.454523,25.326807,26.232813,26.170313,24.390894,23.984308,23.947046,23.832636,23.723383,23.950251,23.619410,23.828516],
+[24.517084,24.196497,23.995508,24.608698,28.488092,32.758995,33.554466,33.207390,30.525629,24.763788,24.200159,23.799219,23.877863,23.757380,23.555567,23.842829],
+[24.558710,24.172998,24.112055,25.016932,32.228355,33.023033,32.972496,32.895470,32.670372,30.979334,25.191126,23.938898,23.924677,23.712336,23.835505,23.903101],
+[24.317713,24.380335,24.302668,24.987085,32.472008,33.152489,33.402031,32.761314,32.432091,32.218498,27.039637,23.903986,23.957788,23.881617,23.962061,23.792505],
+[24.315485,24.342554,24.127497,24.621180,28.896845,33.266594,31.817865,32.334160,32.023491,32.289482,30.169977,24.268213,24.421747,24.015406,25.320002,26.653681],
+[24.515802,24.419825,24.200861,24.246393,24.786127,30.867487,31.479120,32.295708,33.138786,32.722557,32.574883,30.937403,30.917688,29.975092,29.595179,28.984156],
+[24.370234,24.232172,24.045740,24.011652,24.347071,25.025446,31.528772,32.865929,32.986870,33.565758,32.813011,32.732903,32.033134,30.875666,30.489496,29.378901],
+[24.454187,24.564386,24.295588,24.075220,24.173944,24.086725,24.763330,28.760584,32.459160,31.939997,32.069786,32.646660,31.393824,30.946741,31.023127,30.388239],
+[24.575373,24.529047,24.192652,24.078821,24.213984,24.069147,23.968256,24.158625,28.311792,31.554499,32.592155,32.592339,30.778406,30.572840,30.934473,31.062006],
+[24.815668,24.581385,24.345850,24.174585,24.153498,24.232233,24.293055,28.190363,30.837702,30.489435,32.010826,30.742304,30.526484,30.317713,30.326807,31.356012],
+[24.814142,24.736109,24.053736,23.928644,24.102594,24.330072,24.805079,29.877008,31.244654,31.465143,30.717859,29.794458,30.595758,30.730555,30.520014,31.349726]];
+
+
+  const margin = { top: 0, right: 0, bottom: 0, left: 0 },
+    width = 350,
+    height = 350,
+    container = "#container",
+    startColor = "#FC7C89",
+    endColor = "#21A38B"
+
+  // Find our max and min values
+  const maxValue = d3.max(data, layer => {
+    return d3.max(layer, d => {
+      return d
+    })
+  })
+  const minValue = d3.min(data, layer => {
+    return d3.min(layer, d => {
+      return d
+    })
+  })
+
+  const numrows = data.length
+  // assume all subarrays have same length
+  const numcols = data[0].length
+
+  // Create the SVG container
+  const svg = d3
+    .select(container)
+    .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+  // Add a background to the SVG
+  const background = svg
+    .append("rect")
+    .style("stroke", "black")
+    .attr("width", width)
+    .attr("height", height)
+
+  // Build some scales for us to use
+  const x = d3.scale
+    .ordinal()
+    .domain(d3.range(numcols))
+    .rangeBands([0, width])
+
+  const y = d3.scale
+    .ordinal()
+    .domain(d3.range(numrows))
+    .rangeBands([0, height])
+
+  // This scale in particular will
+  // scale our colors from the start
+  // color to the end color.
+  const colorMap = d3.scale
+    .linear()
+    .domain([minValue, maxValue])
+    .range([startColor, endColor])
+
+  // Generate rows and columns and add
+  // color fills.
+  const row = svg
+    .selectAll(".row")
+    .data(data)
+    .enter()
+    .append("g")
+    .attr("class", "row")
+    .attr("transform", (d, i) => {
+      return "translate(0," + y(i) + ")"
+    })
+
+  const cell = row
+    .selectAll(".cell")
+    .data(d => {
+      return d
+    })
+    .enter()
+    .append("g")
+    .attr("class", "cell")
+    .attr("transform", (d, i) => {
+      return "translate(" + x(i) + ", 0)"
+    })
+
+  cell
+    .append("rect")
+    .attr("width", x.rangeBand() - 0.3)
+    .attr("height", y.rangeBand() - 0.3)
+
+  row
+    .selectAll(".cell")
+    .data((d, i) => {
+      return data[i]
+    })
+    .style("fill", colorMap)
+</script>

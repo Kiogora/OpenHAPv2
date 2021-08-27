@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+</head>
+<table class="fixed" border="2">
+	<table class="fixed" border="2">
+		<colgroup>
+		<col width="300px"/><col width="300px"/><col width="300px"/><col width="300px"/>
+		</colgroup>
+		<thead>
+			<tr>
+				<th>
+					<a href="/files/">View files</a>
+				</th>
+				<th>
+					<a href="/sensors/">View sensors</a>
+				</th>
+				<th>
+					<a href="/bluetooth/">View wristband</a>
+				</th>
+				<th>
+					<a href="/measure/">Start measurement</a>
+				</th>
+			</tr>
+		</thead>
+	</table>
+	<table class="fixed" border="2">
+		<col width="1500px"	/>
+		<tr>
+			<td>
+				<h2>OpenHAP Wristband Viewer</h2>
+				<p>Turn your volume up because each time the wristband sends data(every 3 seconds, approximately), you should hear a beep sound.</p>
+				<p><strong>Note</strong>: Check and note down the RSSI(signal strength) of the wristband at the point of entry into the room. This should be done after placement of the unit has been finalized via the "View sensors" above</p>
+				<p><strong>Note</strong>strong>: A stronger signal(RSSI) is closer to zero. -56 is a better signal than -98</p>
+			</td>
+		</tr>
+	</table>
+</table>
+
+<h2>Thermal camera image</h2>
+<div id="container"></div>
+<h2>General data</h2>
+<table class="fixed" border="2">
+	<colgroup>
+		<col width="200px"/><col width="300px"/><col width="300px"/>
+	</colgroup>
+	<thead>
+		<th>
+			Message number
+		</th>
+		<th>
+			Wriststap ID(XX:XX:XX:XX:XX:XX)
+		</th>
+		<th>
+			Wriststap signal strength(RSSI)
+		</th>
+	</thead>
+	<tr>
+		<td>
+			<p id="latest-0-msg-no">undefined</p>
+		</td>
+		<td>
+			<p id="latest-0-id">undefined</p>
+		</td>
+		<td>
+			<p id="latest-0-rssi">undefined</p>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<p id="latest-1-msg-no">undefined</p>
+		</td>
+		<td>
+			<p id="latest-1-id">Undefined</p>
+		</td>
+		<td>
+			<p id="latest-1-rssi">Undefined</p>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<p id="latest-2-msg-no">undefined</p>
+		</td>
+		<td>
+			<p id="latest-2-id">Undefined</p>
+		</td>
+		<td>
+			<p id="latest-2-rssi">Undefined</p>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<p id="latest-3-msg-no">undefined</p>
+		</td>
+		<td>
+			<p id="latest-3-id">Undefined</p>
+		</td>
+		<td>
+			<p id="latest-3-rssi">Undefined</p>
+		</td>
+	</tr>
+	<tr>
+		<td>
+			<p id="latest-4-msg-no">undefined</p>
+		</td>
+		<td>
+			<p id="latest-4-id">Undefined</p>
+		</td>
+		<td>
+			<p id="latest-4-rssi">Undefined</p>
+		</td>
+	</tr>
+</table>
+<p id="status"><strong>Device status</strong>: Waiting for command from browser...</p>
+<script>
+var audio = new Audio('/notification.mp3')
+
+const SOCKET_URL = "ws://192.168.4.1/ws"
+var websocketInst = new WebSocket(SOCKET_URL);
+
+var timeoutFlag;
+var data = []
+
+websocketInst.onopen = function (evt) {
+    console.log("Connection open");
+	console.log(evt);
+	timeoutFlag = setInterval(function() { 
+											websocketInst.send("get-tag-fast");
+											document.getElementById("status").innerHTML = '<strong>Device status</strong>: Received new command from browser. Preparing sensor data...';
+										}, 2000 );
+};
+websocketInst.onmessage = function (evt) {
+	audio.play();
+	document.getElementById("status").innerHTML = '<strong>Device status</strong>: Sent sensor data to browser...';
+};
+websocketInst.onerror = function (evt) {
+	console.log("Error");
+    console.log(evt);
+};
+websocketInst.onclose = function (evt) {
+	clearInterval(timeoutFlag);
+	console.log("Connection closed");
+    console.log(evt);
+};
+</script>

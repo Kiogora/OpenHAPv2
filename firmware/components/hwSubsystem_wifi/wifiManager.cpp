@@ -27,7 +27,6 @@
 #include "mdns.h"
 #include "cJSON.h"
 
-#include "mlx90641.hpp"
 #include <algorithm>
 
 #include "wifiManager.hpp"
@@ -91,18 +90,16 @@ internalHardwareSubsystem::wifi::wifiManager::wifiManager(supportedWifiModes sta
     }
 }
 
-esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string filesystemMountPoint)
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(internalHardwareSubsystem::bluetooth::eddystoneScanner &bleScanner,
+                                                                    internalHardwareSubsystem::storage::spiFlashFilesystem &storage,
+                                                                    externalHardwareSubsystem::thermalImaging::MLX90641 &thermalImager,
+                                                                    externalHardwareSubsystem::timekeeping::DS3231 &ds3231,
+                                                                    externalHardwareSubsystem::particulateSensor::SDS011 &particulateSensor,
+                                                                    externalHardwareInterface::gpio &warningLed)
 {
     static struct server_data *server_data = NULL;
 
-    const char* base_path = filesystemMountPoint.c_str();
-
-    /* Validate file storage base path */
-    if (!base_path || strcmp(base_path, "/spiffs") != 0)
-    {
-        ESP_LOGE(TAG, "File server presently supports only '/spiffs' as base path");
-        return ESP_ERR_INVALID_ARG;
-    }
+    const char* base_path = storage.mountPoint.c_str();
 
     if (server_data)
     {
@@ -118,6 +115,12 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
         return ESP_ERR_NO_MEM;
     }
     strlcpy(server_data->base_path, base_path, sizeof(server_data->base_path));
+    server_data->bleScannerRef=&bleScanner;
+    server_data->particulateSensorRef=&particulateSensor;
+    server_data->ds3231Ref=&ds3231;
+    server_data->thermalImagerRef=&thermalImager;
+    server_data->warningLedRef=&warningLed;
+    server_data->storageRef=&storage;
 
     httpd_handle_t server = NULL;
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -126,9 +129,10 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
      * allow the same handler to respond to multiple different
      * target URIs which match the wildcard scheme */
     config.uri_match_fn = httpd_uri_match_wildcard;
-    config.stack_size = 16384;
-    config.open_fn = on_open_sock;
-    config.close_fn = on_close_sock;
+    config.stack_size = 10240;
+    config.max_uri_handlers = 10;
+    //config.open_fn = on_open_sock;
+    //config.close_fn = on_close_sock;
 
     ESP_LOGI(TAG, "Starting HTTP Server on port: '%d'", config.server_port);
     if (httpd_start(&server, &config) != ESP_OK)
@@ -173,7 +177,7 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
         .uri       = "/index.html",
         .method    = HTTP_GET,
         .handler   = index_html_get_handler,
-        .user_ctx  = NULL
+        .user_ctx  = server_data    // Pass server data as context
     };
     httpd_register_uri_handler(server, &index_html);
 
@@ -183,7 +187,7 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
         .uri       = "/favicon.ico",
         .method    = HTTP_GET,
         .handler   = favicon_get_handler,
-        .user_ctx  = NULL
+        .user_ctx  = server_data    // Pass server data as context
     };
     httpd_register_uri_handler(server, &favicon);
 
@@ -192,9 +196,18 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
         .uri       = "/notification.mp3",
         .method    = HTTP_GET,
         .handler   = mp3_get_handler,
-        .user_ctx  = NULL
+        .user_ctx  = server_data    // Pass server data as context
     };
     httpd_register_uri_handler(server, &mp3);
+
+    httpd_uri_t plotter = 
+    {
+        .uri       = "/d3.min.js",
+        .method    = HTTP_GET,
+        .handler   = plotter_get_handler,
+        .user_ctx  = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &plotter);
 
     /* URI handler for deleting files from server */
     httpd_uri_t sensor_view = 
@@ -202,9 +215,18 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
         .uri       = "/sensors/",   // Match all URIs of type /delete/path/to/file
         .method    = HTTP_GET,
         .handler   = sensor_view_handler,
-        .user_ctx   = NULL,
+        .user_ctx   = server_data    // Pass server data as context
     };
     httpd_register_uri_handler(server, &sensor_view);
+
+    httpd_uri_t ble_view = 
+    {
+        .uri       = "/bluetooth/",
+        .method    = HTTP_GET,
+        .handler   = ble_view_handler,
+        .user_ctx   = server_data    // Pass server data as context
+    };
+    httpd_register_uri_handler(server, &ble_view);
 
     /* URI handler for deleting files from server */
     httpd_uri_t websockets = 
@@ -212,13 +234,14 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::startServer(std::string 
         .uri       = "/ws",   // Match all URIs of type /delete/path/to/file
         .method    = HTTP_GET,
         .handler   = websocket_handler,
-        .user_ctx   = NULL,
+        .user_ctx   = server_data,    // Pass server data as context
         .is_websocket = true,
         .handle_ws_control_frames = true
     };
     httpd_register_uri_handler(server, &websockets);
 
-    startMDNS();
+    /*MDNS disabled - Saves 3KB of DRAM*/
+    /*startMDNS();*/
 
     return ESP_OK;
 }
@@ -278,20 +301,24 @@ void internalHardwareSubsystem::wifi::wifiManager::on_close_sock(httpd_handle_t 
     ESP_LOGI(TAG, "Socket has been closed");
 }
 
-void internalHardwareSubsystem::wifi::wifiManager::ws_async_send(void *arg)
+void internalHardwareSubsystem::wifi::wifiManager::ws_async_send_ble_data(void *arg)
 {
-    struct async_resp_arg *resp_arg = (struct async_resp_arg *)arg;
+    struct async_resp_arg_ble_data *resp_arg = (struct async_resp_arg_ble_data *)arg;
     httpd_handle_t hd = resp_arg->hd;
     int fd = resp_arg->fd;
 
-    externalHardwareSubsystem::thermalImaging::MLX90641 thermalImager;
-    const float* imageBuffer = thermalImager.GetImage();
-    float maxThermalTemperature = *std::max_element(imageBuffer, imageBuffer+thermalImager.pixelCount);
+    const char* address_idx[] = {"bt_address_0","bt_address_1","bt_address_2","bt_address_3","bt_address_4"};
+    const char* rssi_idx[] = {"rssi_0","rssi_1","rssi_2","rssi_3","rssi_4"};
     
     cJSON *response = cJSON_CreateObject();
     if (response  == NULL){ cJSON_Delete(response);}
-    cJSON *maxTemp = cJSON_AddNumberToObject(response, "maxTemp", maxThermalTemperature);
-    if (maxTemp  == NULL){ cJSON_Delete(response);}
+    for(int index = 0; index<(*resp_arg->bleScannerRef).scan_history_len; ++index)
+    {
+        //cJSON *bt_address = cJSON_AddStringToObject(response, address_idx[index], ((*resp_arg->bleScannerRef).all_scans[index].bt_address));
+        //if (bt_address  == NULL){ cJSON_Delete(response);}
+        cJSON *rssi = cJSON_AddNumberToObject(response, rssi_idx[index], ((*resp_arg->bleScannerRef).all_scans[index].rssi));
+        if (rssi  == NULL){ cJSON_Delete(response);}
+    }
     char* response_string = cJSON_Print(response);
 
     httpd_ws_frame_t ws_pkt;
@@ -305,12 +332,77 @@ void internalHardwareSubsystem::wifi::wifiManager::ws_async_send(void *arg)
     free(resp_arg);
 }
 
-esp_err_t internalHardwareSubsystem::wifi::wifiManager::trigger_async_send(httpd_handle_t handle, httpd_req_t *req)
+void internalHardwareSubsystem::wifi::wifiManager::ws_async_send_sensor_data(void *arg)
 {
-    struct async_resp_arg *resp_arg = (struct async_resp_arg *)malloc(sizeof(struct async_resp_arg));
-    resp_arg->hd = req->handle;
-    resp_arg->fd = httpd_req_to_sockfd(req);
-    return httpd_queue_work(handle, ws_async_send, resp_arg);
+    struct async_resp_arg_sensor_data *resp_arg = (struct async_resp_arg_sensor_data *)arg;
+    httpd_handle_t hd = resp_arg->hd;
+    int fd = resp_arg->fd;
+
+    ESP_LOGI(TAG, "Sampling thermal camera...");
+    const float* imageBuffer = (*resp_arg->thermalImagerRef).GetImage();
+    float maxThermalTemperature = *std::max_element(imageBuffer, imageBuffer+(*resp_arg->thermalImagerRef).pixelCount);
+    ESP_LOGI(TAG, "Completed sampling thermal camera");
+    
+    ESP_LOGI(TAG, "Sampling particulates...");
+    float pollutantConcentration = 0;
+    (*resp_arg->particulateSensorRef).powerState.on();
+    (*resp_arg->particulateSensorRef).getParticulateMeasurement(pollutantConcentration);
+    (*resp_arg->particulateSensorRef).powerState.off();
+    ESP_LOGI(TAG, "Completed sampling particulates");
+
+    ESP_LOGI(TAG, "Getting RTC time...");
+    std::time_t  now;
+    (*resp_arg->ds3231Ref).get_time(now);
+    ESP_LOGI(TAG, "Completed getting RTC time");
+    
+    cJSON *response = cJSON_CreateObject();
+    if (response  == NULL){ cJSON_Delete(response);}
+    cJSON *maxTemp = cJSON_AddNumberToObject(response, "maxTemp", maxThermalTemperature);
+    if (maxTemp  == NULL){ cJSON_Delete(response);}
+    cJSON *tempArray = cJSON_AddArrayToObject(response, "tempArray");
+    if (tempArray  == NULL){ cJSON_Delete(response);}
+    for(uint8_t index = 0; index<(*resp_arg->thermalImagerRef).pixelCount; ++index)
+    {
+        cJSON *pixelTemp = cJSON_CreateNumber(imageBuffer[index]);
+        if (tempArray  == NULL){ cJSON_Delete(response);}
+        cJSON_AddItemToArray(tempArray, pixelTemp );
+    }
+    cJSON *PM2_5 = cJSON_AddNumberToObject(response, "particulates", pollutantConcentration);
+    if (PM2_5  == NULL){ cJSON_Delete(response);}
+    cJSON *time = cJSON_AddStringToObject(response, "time", std::ctime(&now));
+    if (time  == NULL){ cJSON_Delete(response);}
+    char* response_string = cJSON_Print(response);
+
+    httpd_ws_frame_t ws_pkt;
+    memset(&ws_pkt, 0, sizeof(httpd_ws_frame_t));
+    ws_pkt.payload = (uint8_t*)response_string;
+    ws_pkt.len = strlen(response_string);
+    ws_pkt.type = HTTPD_WS_TYPE_TEXT;
+
+    httpd_ws_send_frame_async(hd, fd, &ws_pkt);
+    cJSON_Delete(response);
+    free(resp_arg);
+}
+
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::trigger_async_send_ble_data(httpd_handle_t handle, httpd_req_t *req)
+{
+    struct async_resp_arg_ble_data *ble_data = (struct async_resp_arg_ble_data*)malloc(sizeof(struct async_resp_arg_ble_data));
+    ble_data->hd = req->handle;
+    ble_data->fd = httpd_req_to_sockfd(req);
+    ble_data->bleScannerRef = ((struct server_data *)(req->user_ctx))->bleScannerRef;
+    return httpd_queue_work(handle, ws_async_send_ble_data, ble_data);
+}
+
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::trigger_async_send_sensor_data(httpd_handle_t handle, httpd_req_t *req)
+{
+    struct async_resp_arg_sensor_data *sensor_data = (struct async_resp_arg_sensor_data*)malloc(sizeof(struct async_resp_arg_sensor_data));
+    sensor_data->hd = req->handle;
+    sensor_data->fd = httpd_req_to_sockfd(req);
+    sensor_data->thermalImagerRef = ((struct server_data *)(req->user_ctx))->thermalImagerRef;
+    sensor_data->ds3231Ref = ((struct server_data *)(req->user_ctx))->ds3231Ref;
+    sensor_data->particulateSensorRef = ((struct server_data *)(req->user_ctx))->particulateSensorRef;
+    sensor_data->warningLedRef = ((struct server_data *)(req->user_ctx))->warningLedRef;
+    return httpd_queue_work(handle, ws_async_send_sensor_data, sensor_data);
 }
 
 /* Handler to handle incoming websocket data from connected client*/
@@ -339,7 +431,13 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::websocket_handler(httpd_
 
     if(strcmp((const char*)ws_pkt.payload, "sample") == 0)
     {
-        return trigger_async_send(req->handle, req);
+        ESP_LOGI(TAG, "Obtained wriststrap request message");
+        return trigger_async_send_sensor_data(req->handle, req);
+    }
+    else if(strcmp((const char*)ws_pkt.payload, "get-tag-fast") == 0)
+    {
+        ESP_LOGI(TAG, "Obtained tag request message");
+        return trigger_async_send_ble_data(req->handle, req);
     }
     return ESP_OK;
 }
@@ -353,6 +451,18 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::sensor_view_handler(http
 
     /* Add file upload form and script which on execution sends a POST request to /upload */
     httpd_resp_send_chunk(req, (const char *)sensors_html_start, sensors_html_size);
+    return ESP_OK;
+}
+
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::ble_view_handler(httpd_req_t *req)
+{
+    /* Get handle to embedded file upload script */
+    extern const unsigned char wristband_html_start[] asm("_binary_wristband_html_start");
+    extern const unsigned char wristband_html_end[]   asm("_binary_wristband_html_end");
+    const size_t wristband_html_size = (wristband_html_end - wristband_html_start);
+
+    /* Add file upload form and script which on execution sends a POST request to /upload */
+    httpd_resp_send_chunk(req, (const char *)wristband_html_start, wristband_html_size);
     return ESP_OK;
 }
 
@@ -390,6 +500,16 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::mp3_get_handler(httpd_re
     return ESP_OK;  
 }
 
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::plotter_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char plotter_start[] asm("_binary_d3_min_js_start");
+    extern const unsigned char plotter_end[]   asm("_binary_d3_min_js_end");
+    const size_t plotter_size = (plotter_end - plotter_start);
+    httpd_resp_set_type(req, "text/javascript");
+    httpd_resp_send(req, (const char *)plotter_start, plotter_size);
+    return ESP_OK;  
+}
+
 /* Send HTTP response with a run-time generated html consisting of
  * a list of all files and folders under the requested path.
  * In case of SPIFFS this returns empty list when path is any
@@ -398,6 +518,9 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
 {
     char entrypath[ESP_VFS_PATH_MAX + CONFIG_SPIFFS_OBJ_NAME_LEN];
     char entrysize[16];
+    char diskutilization[30];
+    size_t used_bytes = 0;
+    size_t total_bytes = 0;
     const char *entrytype;
 
     struct dirent *entry;
@@ -418,7 +541,13 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
     }
 
     /* Send HTML file header */
-    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html><html><body>");
+    httpd_resp_sendstr_chunk(req, "<!DOCTYPE html>"
+                                  "<html lang=\"en\">"
+                                  "<head>"
+                                  "<!-- Required meta tags-->"
+                                  "<meta charset=\"UTF-8\">"
+                                  "</head>"
+                                  "<body>");
 
     extern const unsigned char index_html_start[] asm("_binary_index_html_start");
     extern const unsigned char index_html_end[]   asm("_binary_index_html_end");
@@ -429,7 +558,7 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
     httpd_resp_sendstr_chunk(req,
         "<table class=\"fixed\" border=\"1\">"
         "<col width=\"800px\" /><col width=\"300px\" /><col width=\"300px\" /><col width=\"100px\" />"
-        "<thead><tr><th>Name</th><th>Type</th><th>Size (Megabytes)</th><th>Delete</th></tr></thead>"
+        "<thead><tr><th>Name</th><th>Type</th><th>Size (bytes)</th><th>Delete</th></tr></thead>"
         "<tbody>");
 
     /* Iterate over all files / folders and fetch their names and sizes */
@@ -441,8 +570,7 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
             ESP_LOGE(TAG, "Failed to stat %s : %s", entrytype, entry->d_name);
             continue;
         }
-        sprintf(entrysize, "%.2f", entry_stat.st_size/(1024.*1024.));
-        ESP_LOGI(TAG, "Found %s : %s (%f Megabytes)", entrytype, entry->d_name, entry_stat.st_size/(1024.*1024.));
+        sprintf(entrysize, "%ld", entry_stat.st_size);
 
         /* Send chunk of HTML file containing table entries with file name and size */
         httpd_resp_sendstr_chunk(req, "<tr><td><a href=\"");
@@ -468,8 +596,13 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
     closedir(dir);
 
     /* Finish the file list table */
-    httpd_resp_sendstr_chunk(req, "</tbody></table>");
+    httpd_resp_sendstr_chunk(req, "</tbody></table>\n");
 
+    (*((struct server_data *)req->user_ctx)->storageRef).getBytesAvailable(used_bytes, total_bytes);
+    snprintf(diskutilization, sizeof(diskutilization), "%.1f%c used of maximum 100%c",(used_bytes/(float)total_bytes)*100,'%','%');
+    httpd_resp_sendstr_chunk(req, "<p><strong>Disk utilization</strong> : ");
+    httpd_resp_sendstr_chunk(req, diskutilization);
+    httpd_resp_sendstr_chunk(req, "</p>\n");
     /* Send remaining chunk of HTML file to complete it */
     httpd_resp_sendstr_chunk(req, "</body></html>");
 

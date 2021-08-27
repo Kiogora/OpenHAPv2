@@ -20,9 +20,21 @@ powerState(GPIO_NUM_26, externalHardwareInterface::gpio::output), uartPort(uartP
     .source_clk = UART_SCLK_APB,
     };
         
-    uart_driver_install(uartPort, 2 * readBufferByteSize, 0, 0, NULL, 0);
-    uart_param_config(uartPort, &uart_config);
-    uart_set_pin(uartPort, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    esp_err_t err = uart_driver_install(uartPort, 2 * readBufferByteSize, 0, 0, NULL, 0);
+    if(err != ESP_OK)
+    {
+        ESP_LOGI(TAG, "Error during driver setup");
+    }
+    err = uart_param_config(uartPort, &uart_config);
+    if(err != ESP_OK)
+    {
+        ESP_LOGI(TAG, "Error during UART driver parameter setup");
+    }
+    err = uart_set_pin(uartPort, txPin, rxPin, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    if(err != ESP_OK)
+    {
+        ESP_LOGI(TAG, "Error during UART driver pin setup");
+    }
     memset(readBuffer, 0, readBufferByteSize);
 }
 

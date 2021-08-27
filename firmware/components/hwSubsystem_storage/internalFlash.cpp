@@ -163,7 +163,7 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(
         fflush(file);
     }      
 
-    ESP_LOGI(TAG, "Writing CSV data to %S", fileName);
+    ESP_LOGI(TAG, "Writing CSV data to %s", fileName);
     i = fprintf(file, "\"%u\",\"%s\",\"%d\",\"%.2f\",\"%.2f\"", (uint32_t) time_now, macAddress.c_str(), averageRssi, 
                                                                 particulateConcentration, maxTemp);
     if(i < 0)

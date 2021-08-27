@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags-->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+</head>
+<table class="fixed" border="2">
+	<table class="fixed" border="2">
+		<colgroup>
+		<col width="300px"/><col width="300px"/><col width="300px"/><col width="300px"/>
+		</colgroup>
+		<thead>
+			<tr>
+				<th>
+					<a href="/files/">View files</a>
+				</th>
+				<th>
+					<a href="/sensors/">View sensors</a>
+				</th>
+				<th>
+					<a href="/bluetooth/">View wristband</a>
+				</th>
+				<th>
+					<a href="/measure/">Start measurement</a>
+				</th>
+			</tr>
+		</thead>
+	</table>
+	<table class="fixed" border="2">
+		<col width="1500px"	/>
+		<tr>
+			<td>
+				<h2>OpenHAP Sensor Viewer</h2>
+				<p>Turn your volume up because each time the device sends data(every 15 seconds), you should hear a beep sound.</p>
+				<p><strong>Note</strong>: Check maximum thermal temperature, pollution level and device time at the table on the bottom of this page.</p>
+				<p><strong>Note</strong>: Use the camera image below to check what the camera is seeing. It may take two beeps(thirty seconds) for the image to stabilize and show up once the unit is still(no movement).Hotter temperatures appear red, cooler temperatures appear green.</p>
+			</td>
+		</tr>
+	</table>
+</table>
+
+<h2>Thermal camera image</h2>
+<div id="container"></div>
+<h2>General data</h2>
+<table class="fixed" border="2">
+	<colgroup>
+		<col width="200px"/><col width="300px"/>
+	</colgroup>
+	<tr>
+		<td>
+			<p>Real time max temperature</p>
+		</td>
+		<td>
+			<p id="t-max"></p>
+		</td>
+	</tr>
+		<td>
+			<p>Real time pollution level</p>
+		</td>
+		<td>
+			<p id="PM-2.5"></p>
+		</td>
+	</tr>
+		<td>
+			<p>Real time device time</p>
+		</td>
+		<td>
+			<p id="time"></p>
+		</td>
+	</tr>
+</table>
+<p id="status"><strong>Device status</strong>: Waiting for command from browser...</p>
+<script src="/d3.min.js"></script>
+<script>
+var audio = new Audio('/notification.mp3')
+
+const SOCKET_URL = "ws://192.168.4.1/ws"
+var websocketInst = new WebSocket(SOCKET_URL);
+
+var timeoutFlag;
+var data = []
+
+websocketInst.onopen = function (evt) {
+    console.log("Connection open");
+	console.log(evt);
+	timeoutFlag = setInterval(function() { 
+											websocketInst.send("sample");
+											document.getElementById("status").innerHTML = '<strong>Device status</strong>: Received new command from browser. Preparing sensor data...';
+										}, 15000 );
+};
+websocketInst.onmessage = function (evt) {
+	data = []
+	temp = []
+	audio.play();
+	document.getElementById("status").innerHTML = '<strong>Device status</strong>: Sent sensor data to browser...';
+	try {
+		var response = JSON.parse(evt.data);
+		originalArray = response.tempArray
+    	document.getElementById("t-max").innerHTML = response.maxTemp.toFixed(4)+' °C';
+		document.getElementById("container").innerHTML = '';
+		document.getElementById("PM-2.5").innerHTML = response.particulates.toFixed(4)+' µg/m<sup>3</sup>';
+		document.getElementById("time").innerHTML = response.time+' GMT';
+	} catch(error) {
+		document.getElementById("t-max").innerHTML = 'Internal error';
+		document.getElementById("PM-2.5").innerHTML = 'Internal error';
+		document.getElementById("time").innerHTML = 'Internal error';
+	}
+	temp = response.tempArray;
+	while(temp.length > 0)
+	{
+		data.push(temp.splice(0,16))
+	}
+
+	console.log(data)
+
+	const margin = { top: 0, right: 0, bottom: 0, left: 0 },
+	width = 350,
+	height = 350,
+	container = "#container",
+	startColor = "#21A38B",
+	endColor = "#FC7C89"
+
+	// Find our max and min values
+	const maxValue = d3.max(data, layer => {
+	return d3.max(layer, d => {
+		return d
+	})
+	})
+	const minValue = d3.min(data, layer => {
+	return d3.min(layer, d => {
+		return d
+	})
+	})
+
+	const numrows = 12
+	// assume all subarrays have same length
+	const numcols = 16
+
+	// Create the SVG container
+	const svg = d3
+	.select(container)
+	.append("svg")
+	.attr("width", width + margin.left + margin.right)
+	.attr("height", height + margin.top + margin.bottom)
+	.append("g")
+	.attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+
+	// Add a background to the SVG
+	const background = svg
+	.append("rect")
+	.style("stroke", "black")
+	.attr("width", width)
+	.attr("height", height)
+
+	// Build some scales for us to use
+	const x = d3.scale
+	.ordinal()
+	.domain(d3.range(numcols))
+	.rangeBands([0, width])
+
+	const y = d3.scale
+	.ordinal()
+	.domain(d3.range(numrows))
+	.rangeBands([0, height])
+
+	// This scale in particular will
+	// scale our colors from the start
+	// color to the end color.
+	const colorMap = d3.scale
+	.linear()
+	.domain([minValue, maxValue])
+	.range([startColor, endColor])
+
+	// Generate rows and columns and add
+	// color fills.
+	const row = svg
+	.selectAll(".row")
+	.data(data)
+	.enter()
+	.append("g")
+	.attr("class", "row")
+	.attr("transform", (d, i) => {
+		return "translate(0," + y(i) + ")"
+	})
+
+	const cell = row
+	.selectAll(".cell")
+	.data(d => {
+		return d
+	})
+	.enter()
+	.append("g")
+	.attr("class", "cell")
+	.attr("transform", (d, i) => {
+		return "translate(" + x(i) + ", 0)"
+	})
+
+	cell
+	.append("rect")
+	.attr("width", x.rangeBand() - 0.3)
+	.attr("height", y.rangeBand() - 0.3)
+
+	row
+	.selectAll(".cell")
+	.data((d, i) => {
+		return data[i]
+	})
+	.style("fill", colorMap)
+};
+websocketInst.onerror = function (evt) {
+	console.log("Error");
+    console.log(evt);
+};
+websocketInst.onclose = function (evt) {
+	clearInterval(timeoutFlag);
+	console.log("Connection closed");
+    console.log(evt);
+};
+</script>

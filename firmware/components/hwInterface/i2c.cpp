@@ -39,13 +39,13 @@ m_sdaPin(sdaPin), m_sclPin(sclPin), m_portNum(portNum)
     esp_err_t err = i2c_param_config(m_portNum, &conf);
     if (err != ESP_OK)
     {
-        ESP_LOGE(TAG, "I2C_param_config: rc=%d %s", err, esp_err_to_name(err));
+        ESP_LOGE(TAG, "I2C_param_config: %s", esp_err_to_name(err));
     }
 
     err = i2c_driver_install(m_portNum, I2C_MODE_MASTER, 0, 0, 0);
     if (err != ESP_OK)
     {
-        ESP_LOGE(TAG, "i2c_driver_install: rc=%d %s", err, esp_err_to_name(err));
+        ESP_LOGE(TAG, "i2c_driver_install error: %s", esp_err_to_name(err));
     }
     
     /*I2C bus mutex to avoid bus contention*/

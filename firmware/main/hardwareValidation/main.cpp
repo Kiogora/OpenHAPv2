@@ -125,8 +125,8 @@ extern "C" void app_main()
                                   #endif
                                 );
     internalStorage.printFilesOnDisk();
-    internalStorage.deleteFile("measurement.csv");
-    internalStorage.printFilesOnDisk();
+    //internalStorage.deleteFile("measurement.csv");
+    //internalStorage.printFilesOnDisk();
 
 #ifdef CONFIG_ENABLE_DEFAULT_MAC_ADDRESS_RETRIEVAL_HARDWARE_VALIDATION
     uint8_t base_mac_addr[6] = {0};

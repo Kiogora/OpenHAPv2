@@ -11,19 +11,21 @@
 
 #include "eddystoneScanner.hpp"
 
+internalHardwareSubsystem::bluetooth::eddystoneScanner::scan_results internalHardwareSubsystem::bluetooth::eddystoneScanner::all_scans[internalHardwareSubsystem::bluetooth::eddystoneScanner::scan_history_len];
+
 
 static const char *TAG = "internalHardwareSubsystem::bluetooth";
 
 internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner()
 {
     esp_err_t status = ESP_FAIL;
-    ESP_LOGI(TAG, "Registration ok");
-
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     esp_bt_controller_init(&bt_cfg);
     esp_bt_controller_enable(ESP_BT_MODE_BLE);
+
+    memset(all_scans, 0, scan_history_len*sizeof(scan_results));
 
     esp_bluedroid_init();
     esp_bluedroid_enable();
@@ -96,6 +98,15 @@ void internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_ev
                         ESP_LOGI(TAG, "Eddystone Frame Found");
                         esp_log_buffer_hex("Device address:", scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
                         ESP_LOGI(TAG, "RSSI of packet:%d dbm", scan_result->scan_rst.rssi);
+                        for(int idx=scan_history_len-2; idx>=0; --idx)
+                        {
+                            all_scans[idx+1] = all_scans[idx];
+                            if(idx == 0)
+                            {
+                                all_scans[idx].rssi = (scan_result->scan_rst).rssi;
+                            }
+                        }
+                        
                     }
                     break;
                 }

@@ -15,7 +15,16 @@ namespace internalHardwareSubsystem
 
     /*Constructor method*/
     eddystoneScanner();
-        
+
+    static constexpr int scan_history_len = 5;
+    struct scan_results
+    {
+        char *bt_address;
+        int rssi;
+    };
+    
+    static scan_results all_scans[scan_history_len];
+    
     private:
 
     /*******************************************************************/
