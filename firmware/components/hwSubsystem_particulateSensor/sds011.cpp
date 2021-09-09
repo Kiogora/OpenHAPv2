@@ -20,7 +20,7 @@ powerState(GPIO_NUM_26, externalHardwareInterface::gpio::output), uartPort(uartP
     .source_clk = UART_SCLK_APB,
     };
         
-    esp_err_t err = uart_driver_install(uartPort, 2 * readBufferByteSize, 0, 0, NULL, 0);
+    esp_err_t err = uart_driver_install(uartPort, 2*readBufferByteSize<minimumRxFIFOLen?minimumRxFIFOLen:(2*readBufferByteSize), 0, 0, NULL, 0);
     if(err != ESP_OK)
     {
         ESP_LOGI(TAG, "Error during driver setup");

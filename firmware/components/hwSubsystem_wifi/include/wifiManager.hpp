@@ -20,12 +20,15 @@ namespace internalHardwareSubsystem
     class wifiManager
     {
     public:
-    enum struct supportedWifiModes: uint8_t{accessPointMode = 0x00, clientMode = 0x01};
+    enum struct supportedWifiModes: uint8_t{accessPointMode = 0x00};
+
+    char ssid[32];
 
     /*Constructor method*/
     wifiManager(supportedWifiModes startupMode = supportedWifiModes::accessPointMode);
     /*Server start method*/
     esp_err_t startServer(internalHardwareSubsystem::bluetooth::eddystoneScanner &bleScanner,
+                          internalHardwareSubsystem::storage::nonVolatileStorageSettings &settings,
                           internalHardwareSubsystem::storage::spiFlashFilesystem &storage,
                           externalHardwareSubsystem::thermalImaging::MLX90641 &thermalImager,
                           externalHardwareSubsystem::timekeeping::DS3231 &ds3231,
@@ -64,6 +67,7 @@ namespace internalHardwareSubsystem
     static esp_err_t trigger_async_send_sensor_data(httpd_handle_t handle, httpd_req_t *req);
     static esp_err_t trigger_async_send_ble_data(httpd_handle_t handle, httpd_req_t *req);
     static esp_err_t websocket_handler(httpd_req_t *req);
+    static esp_err_t send_unified_header(httpd_req_t *req);
     static esp_err_t ble_view_handler(httpd_req_t *req);
     static esp_err_t sensor_view_handler(httpd_req_t *req);
 
@@ -77,6 +81,7 @@ namespace internalHardwareSubsystem
         char scratch[SCRATCH_BUFSIZE];
         /*Peripherals accessible to server callback functions*/
         internalHardwareSubsystem::bluetooth::eddystoneScanner* bleScannerRef;
+        internalHardwareSubsystem::storage::nonVolatileStorageSettings* settingsRef;
         internalHardwareSubsystem::storage::spiFlashFilesystem* storageRef;
         externalHardwareSubsystem::thermalImaging::MLX90641*     thermalImagerRef;
         externalHardwareSubsystem::timekeeping::DS3231* ds3231Ref;
@@ -88,6 +93,7 @@ namespace internalHardwareSubsystem
     static esp_err_t favicon_get_handler(httpd_req_t *req);
     static esp_err_t mp3_get_handler(httpd_req_t *req);
     static esp_err_t plotter_get_handler(httpd_req_t *req);
+    static esp_err_t measurement_handler(httpd_req_t *req);
     static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath);
     static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filename);
     static const char* get_path_from_uri(char *dest, const char *base_path, const char *uri, size_t destsize);

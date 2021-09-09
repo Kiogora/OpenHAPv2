@@ -1,8 +1,7 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <!-- Required meta tags-->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 </head>
@@ -27,23 +26,25 @@
 				</th>
 			</tr>
 		</thead>
-	</table>
+	</table> -->
 	<table class="fixed" border="2">
 		<col width="1500px"	/>
 		<tr>
 			<td>
 				<h2>OpenHAP Wristband Viewer</h2>
-				<p>Turn your volume up because each time the wristband sends data(every 3 seconds, approximately), you should hear a beep sound.</p>
-				<p><strong>Note</strong>: Check and note down the RSSI(signal strength) of the wristband at the point of entry into the room. This should be done after placement of the unit has been finalized via the "View sensors" above</p>
-				<p><strong>Note</strong>strong>: A stronger signal(RSSI) is closer to zero. -56 is a better signal than -98</p>
+				<p>Turn your volume up because each time the wristband sends data(every 1 second, approximately), you should hear a beep sound.
+				   A beep sound tells you that the device is sending data.If there is no beep sound, press anywhere on the page and it should 
+				   start, such as here ==〉〈==</p>
+				<p><strong>Note</strong>: Check and note down the RSSI(signal strength) of the wristband at the point of entry into the house. 
+				   This should be done after placement of the unit has been finalized via the <a href="/sensors/">View sensors</a> link at the top.
+				   We will include this in the questionnaire at project start</p>
+				<p><strong>Note</strong>: A stronger signal(RSSI) is closer to zero. For example: -56 is a better signal than -98</p>
 			</td>
 		</tr>
 	</table>
 </table>
-
-<h2>Thermal camera image</h2>
 <div id="container"></div>
-<h2>General data</h2>
+<h2>Wristband data</h2>
 <table class="fixed" border="2">
 	<colgroup>
 		<col width="200px"/><col width="300px"/><col width="300px"/>
@@ -53,15 +54,15 @@
 			Message number
 		</th>
 		<th>
-			Wriststap ID(XX:XX:XX:XX:XX:XX)
+			Wristband ID(XX:XX:XX:XX:XX:XX)
 		</th>
 		<th>
-			Wriststap signal strength(RSSI)
+			Wristband signal strength(RSSI)
 		</th>
 	</thead>
 	<tr>
 		<td>
-			<p id="latest-0-msg-no">undefined</p>
+			<p id="latest-0-msg-no">1 (Newest data)</p>
 		</td>
 		<td>
 			<p id="latest-0-id">undefined</p>
@@ -72,7 +73,7 @@
 	</tr>
 	<tr>
 		<td>
-			<p id="latest-1-msg-no">undefined</p>
+			<p id="latest-1-msg-no">2</p>
 		</td>
 		<td>
 			<p id="latest-1-id">Undefined</p>
@@ -83,7 +84,7 @@
 	</tr>
 	<tr>
 		<td>
-			<p id="latest-2-msg-no">undefined</p>
+			<p id="latest-2-msg-no">3</p>
 		</td>
 		<td>
 			<p id="latest-2-id">Undefined</p>
@@ -94,7 +95,7 @@
 	</tr>
 	<tr>
 		<td>
-			<p id="latest-3-msg-no">undefined</p>
+			<p id="latest-3-msg-no">4</p>
 		</td>
 		<td>
 			<p id="latest-3-id">Undefined</p>
@@ -105,7 +106,7 @@
 	</tr>
 	<tr>
 		<td>
-			<p id="latest-4-msg-no">undefined</p>
+			<p id="latest-4-msg-no">5 (Oldest data)</p>
 		</td>
 		<td>
 			<p id="latest-4-id">Undefined</p>
@@ -119,7 +120,7 @@
 <script>
 var audio = new Audio('/notification.mp3')
 
-const SOCKET_URL = "ws://192.168.4.1/ws"
+const SOCKET_URL = "ws://192.168.4.1/ws_ble"
 var websocketInst = new WebSocket(SOCKET_URL);
 
 var timeoutFlag;
@@ -134,8 +135,17 @@ websocketInst.onopen = function (evt) {
 										}, 2000 );
 };
 websocketInst.onmessage = function (evt) {
-	audio.play();
 	document.getElementById("status").innerHTML = '<strong>Device status</strong>: Sent sensor data to browser...';
+	var response = JSON.parse(evt.data);
+	for(let i = 0; i<5; ++i){
+		if('bt_address_'+i in response && response['bt_address_'+i] != ''){	
+			if('rssi_'+i in response && response['rssi_'+i] != 0){
+				document.getElementById('latest-'+i+'-id').innerHTML = response['bt_address_'+i].toUpperCase() ;
+				document.getElementById('latest-'+i+'-rssi').innerHTML = response['rssi_'+i];
+				audio.play();
+			}
+		}
+	}
 };
 websocketInst.onerror = function (evt) {
 	console.log("Error");

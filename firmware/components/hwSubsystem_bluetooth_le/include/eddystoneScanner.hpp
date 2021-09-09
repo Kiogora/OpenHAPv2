@@ -19,14 +19,18 @@ namespace internalHardwareSubsystem
     static constexpr int scan_history_len = 5;
     struct scan_results
     {
-        char *bt_address;
+        char bt_address[18];
         int rssi;
     };
     
     static scan_results all_scans[scan_history_len];
-    
-    private:
+    static char mac_string[18];
 
+    void get_average_rssi(int16_t &packet_num, float &average);
+    private:
+    static int16_t running_packet_sum;
+    static int16_t running_rssi_sum;
+    static uint8_t desired_tag_addr[6];
     /*******************************************************************/
     /*BLE scan parameters and eddystone event callbacks from this point*/
     /*******************************************************************/

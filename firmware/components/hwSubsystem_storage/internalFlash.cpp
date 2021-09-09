@@ -6,9 +6,11 @@
 #include <sys/param.h>
 #include <sys/unistd.h>
 
+#include "nvs_flash.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_vfs.h"
+#include "esp_system.h"
 #include "esp_spiffs.h"
 #include "internalFlash.hpp"
 
@@ -117,9 +119,9 @@ void internalHardwareSubsystem::storage::spiFlashFilesystem::deleteFile(const ch
     unlink(pathQualifiedFilename);
 }
 
-esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(const char* fileName, std::time_t time_now = 0, 
-                                                                                std::string macAddress = "", int16_t averageRssi = 0, 
-                                                                                float particulateConcentration = 0., float maxTemp=0.)
+esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(const char* fileName, std::time_t time_now = 0, int16_t packet_num = 0,
+                                                                                float averageRssi = 0, float particulateConcentration = 0., 
+                                                                                float maxTemp=0.)
 {
     int i;
     struct stat st;
@@ -153,7 +155,7 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(
     if(!fileExists)
     {
         ESP_LOGI(TAG, "Writing CSV header to %s", fileName);
-        i = fprintf(file, "\"Unix time\",\"Tag\",\"Mean RSSI\",\"PM 2.5\",\"Max viewable temperature\"\n");
+        i = fprintf(file, "\"Unix_time\",\"BLE_packets\",\"Mean_rssi\",\"PM_2.5\",\"Max_temp\", \"Reset_reason\"\r\n");
         if(i < 0)
         {
             ESP_LOGE(TAG, "Failed to write to opened file");
@@ -164,8 +166,9 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(
     }      
 
     ESP_LOGI(TAG, "Writing CSV data to %s", fileName);
-    i = fprintf(file, "\"%u\",\"%s\",\"%d\",\"%.2f\",\"%.2f\"", (uint32_t) time_now, macAddress.c_str(), averageRssi, 
-                                                                particulateConcentration, maxTemp);
+    i = fprintf(file, "\"%u\",\"%d\",\"%.2f\",\"%.2f\",\"%.2f\",\"%d\"\r\n", (uint32_t) time_now, packet_num, averageRssi, 
+                                                                    particulateConcentration, maxTemp,
+                                                                    esp_reset_reason());
     if(i < 0)
     {
         ESP_LOGE(TAG, "Failed to write to opened file");
@@ -175,4 +178,99 @@ esp_err_t internalHardwareSubsystem::storage::spiFlashFilesystem::writeCSVEntry(
     fflush(file);
     fclose(file);
     return ESP_OK;
+}
+
+internalHardwareSubsystem::storage::nonVolatileStorageSettings::nonVolatileStorageSettings()
+{
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( err );
+}
+bool internalHardwareSubsystem::storage::nonVolatileStorageSettings::isMeasurementActive()
+{   
+
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( err );
+
+    nvs_handle_t my_handle;
+
+    ESP_LOGI(TAG, "Opening Non-Volatile Storage (NVS) handle... ");
+    err = nvs_open("storage", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Error (%s) opening NVS handle!\n", esp_err_to_name(err));
+    } 
+    else 
+    {
+        ESP_LOGI(TAG, "Done opening NVS handle");
+    }
+
+    int32_t current_mode = inactive;
+    err = nvs_get_i32(my_handle, "meas_state", &current_mode);
+    switch (err) 
+    {
+        case ESP_OK:
+            ESP_LOGI(TAG, "Current measurement state is %s", current_mode==active?"activated":"deactivated");
+            nvs_close(my_handle);
+            return current_mode==active;
+        case ESP_ERR_NVS_NOT_FOUND:
+            ESP_LOGE(TAG, "Current measurement state is not initialized yet!");
+            err = nvs_set_i32(my_handle, "meas_state", current_mode);
+            ESP_LOGI(TAG, "Setting default measurement state %s", (err != ESP_OK)?"failed!":"done");
+            ESP_LOGI(TAG, "Committing updates in NVS...");
+            err = nvs_commit(my_handle);
+            ESP_LOGI(TAG, "Commiting default measurement state %s", (err != ESP_OK)?"failed!":"done");
+            nvs_close(my_handle);
+            return current_mode==active;
+        default :
+            ESP_LOGE(TAG, "Error reading: %s", esp_err_to_name(err));
+            nvs_close(my_handle);
+            return false;
+    }
+    return false;
+}
+esp_err_t internalHardwareSubsystem::storage::nonVolatileStorageSettings::setMeasurementFlag(int32_t desiredMode)
+{
+    // Initialize NVS
+    esp_err_t err = nvs_flash_init();
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        // NVS partition was truncated and needs to be erased
+        // Retry nvs_flash_init
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        err = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK( err );
+
+    nvs_handle_t my_handle;
+
+    ESP_LOGI(TAG, "Opening Non-Volatile Storage (NVS) handle... ");
+    err = nvs_open("storage", NVS_READWRITE, &my_handle);
+    if (err != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Error (%s) opening NVS handle!", esp_err_to_name(err));
+    } 
+    else 
+    {
+        ESP_LOGI(TAG, "Done opening NVS handle");
+    }
+    err = nvs_set_i32(my_handle, "meas_state", desiredMode);
+    ESP_LOGI(TAG, "Setting default measurement state %s", (err != ESP_OK)?"failed!":"done");
+    ESP_LOGI(TAG, "Committing updates in NVS...");
+    err = nvs_commit(my_handle);
+    ESP_LOGI(TAG, "Commiting default measurement state %s", (err != ESP_OK)?"failed!":"Done");
+    nvs_close(my_handle);
+    return err;
 }

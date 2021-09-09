@@ -2,6 +2,7 @@
 #include <string.h>
 #include "nvs_flash.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "esp_bt_defs.h"
 #include "esp_bt_main.h"
 #include "esp_gatt_defs.h"
@@ -12,7 +13,10 @@
 #include "eddystoneScanner.hpp"
 
 internalHardwareSubsystem::bluetooth::eddystoneScanner::scan_results internalHardwareSubsystem::bluetooth::eddystoneScanner::all_scans[internalHardwareSubsystem::bluetooth::eddystoneScanner::scan_history_len];
-
+char internalHardwareSubsystem::bluetooth::eddystoneScanner::mac_string[18];
+int16_t internalHardwareSubsystem::bluetooth::eddystoneScanner::running_packet_sum;
+int16_t internalHardwareSubsystem::bluetooth::eddystoneScanner::running_rssi_sum;
+uint8_t internalHardwareSubsystem::bluetooth::eddystoneScanner::desired_tag_addr[6];
 
 static const char *TAG = "internalHardwareSubsystem::bluetooth";
 
@@ -25,7 +29,25 @@ internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner()
     esp_bt_controller_init(&bt_cfg);
     esp_bt_controller_enable(ESP_BT_MODE_BLE);
 
+    /*Zero out scan history buffer*/
     memset(all_scans, 0, scan_history_len*sizeof(scan_results));
+
+    /*Read base MAC, we look for the tag with the same instance ID as this base MAC*/
+    esp_err_t ret = esp_efuse_mac_get_default(desired_tag_addr);
+    if (ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "Failed to get base MAC address from EFUSE BLK0. (%s)", esp_err_to_name(ret));
+        ESP_LOGE(TAG, "Aborting");
+        abort();
+    }
+    else
+    {
+        ESP_LOGI(TAG, "Base MAC Address read from EFUSE BLK0");
+    }
+
+    
+    snprintf(mac_string, sizeof(mac_string), "%02x:%02x:%02x:%02x:%02x:%02x",
+             desired_tag_addr[0], desired_tag_addr[1], desired_tag_addr[2], desired_tag_addr[3], desired_tag_addr[4], desired_tag_addr[5]);
 
     esp_bluedroid_init();
     esp_bluedroid_enable();
@@ -95,18 +117,31 @@ void internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_ev
                         // The received adv data is a correct eddystone frame packet.
                         // Here, we get the eddystone infomation in eddystone_res, we can use the data in res to do other things.
                         // For example, just print them:
-                        ESP_LOGI(TAG, "Eddystone Frame Found");
-                        esp_log_buffer_hex("Device address:", scan_result->scan_rst.bda, ESP_BD_ADDR_LEN);
-                        ESP_LOGI(TAG, "RSSI of packet:%d dbm", scan_result->scan_rst.rssi);
-                        for(int idx=scan_history_len-2; idx>=0; --idx)
+                        esp_log_buffer_hex("Eddystone UID frame Found. TAG address:", res.inform.uid.instance_id, ESP_BD_ADDR_LEN);
+                        uint8_t byte_match = 0;
+
+                        for(int i = 0; i < ESP_BD_ADDR_LEN; ++i)
                         {
-                            all_scans[idx+1] = all_scans[idx];
-                            if(idx == 0)
+                            if(res.inform.uid.instance_id[i] == desired_tag_addr[i])
                             {
-                                all_scans[idx].rssi = (scan_result->scan_rst).rssi;
+                                ++byte_match;
                             }
                         }
-                        
+                        if (byte_match == ESP_BD_ADDR_LEN)
+                        {
+                            running_packet_sum += 1;
+                            running_rssi_sum += (scan_result->scan_rst).rssi;
+                            ESP_LOGI(TAG, "Successfully found desired tag. RSSI of packet:%d dbm", scan_result->scan_rst.rssi);
+                            for(int idx=scan_history_len-2; idx>=0; --idx)
+                            {
+                                all_scans[idx+1] = all_scans[idx];
+                                if(idx == 0)
+                                {
+                                    strlcpy(all_scans[idx].bt_address, mac_string, sizeof(all_scans[idx].bt_address));
+                                    all_scans[idx].rssi = (scan_result->scan_rst).rssi;
+                                }
+                            }
+                        }
                     }
                     break;
                 }
@@ -130,6 +165,14 @@ void internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_ev
         default:
             break;
     }
+}
+
+void internalHardwareSubsystem::bluetooth::eddystoneScanner::get_average_rssi(int16_t &packet_num, float &average)
+{
+    average = (float)running_rssi_sum/running_packet_sum;
+    packet_num = running_packet_sum;
+    running_rssi_sum = 0; 
+    running_packet_sum =0;
 }
 
 esp_err_t internalHardwareSubsystem::bluetooth::eddystoneScanner::eddystoneScanner_decode(const uint8_t* buf, uint8_t len, esp_eddystone_result_t &res)

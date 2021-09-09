@@ -30,6 +30,9 @@ extern "C" void app_main()
     /*Setup internal storage*/
     internalHardwareSubsystem::storage::spiFlashFilesystem internalStorage;
     internalStorage.printFilesOnDisk();
+
+    /*Setup non-volatile settings*/
+    internalHardwareSubsystem::storage::nonVolatileStorageSettings settings;
     
     /*Setup eddystone scanner*/
     internalHardwareSubsystem::bluetooth::eddystoneScanner activityDetector;
@@ -38,14 +41,44 @@ extern "C" void app_main()
     internalHardwareSubsystem::wifi::wifiManager wifiSetup;
 
     /*Setup server on port 80 within wifi network - accessible via 192.168.4.1*/
-    wifiSetup.startServer(activityDetector, internalStorage, thermalImager, ds3231, particulateSensor, warningLed);
+    wifiSetup.startServer(activityDetector, settings, internalStorage, thermalImager, ds3231, particulateSensor, warningLed);
 
     while (1)
     {
-        while(startMeasurement == true)
+        while(settings.isMeasurementActive() == true)
         {
+            ESP_LOGI(TAG, "Sampling thermal camera...");
+            const float* imageBuffer = thermalImager.GetImage();
+            float maxThermalTemperature = *std::max_element(imageBuffer, imageBuffer+thermalImager.pixelCount);
+            ESP_LOGI(TAG, "Completed sampling thermal camera");
+            
+            ESP_LOGI(TAG, "Sampling particulates...");
+            float pollutantConcentration = 0;
+            particulateSensor.powerState.on();
+            particulateSensor.getParticulateMeasurement(pollutantConcentration);
+            particulateSensor.powerState.off();
+            ESP_LOGI(TAG, "Completed sampling particulates");
 
+            ESP_LOGI(TAG, "Getting RTC time...");
+            std::time_t  now;
+            ds3231.get_time(now);
+            ESP_LOGI(TAG, "Completed getting RTC time");
+
+            int16_t packet_num;
+            float rssi_average;
+            activityDetector.get_average_rssi(packet_num, rssi_average);
+            internalStorage.writeCSVEntry((std::string(wifiSetup.ssid)+".csv").c_str(), 
+                                          now, packet_num, rssi_average, pollutantConcentration, 
+                                          maxThermalTemperature);
+
+            for(int count = 0, max = 4; count < max; ++count)
+            {
+                warningLed.toggle();
+                vTaskDelay(300/portTICK_RATE_MS);
+            }
+            vTaskDelay(5000/portTICK_RATE_MS);
         }
-        vTaskDelay(1000/portTICK_RATE_MS);
+        ESP_LOGI(TAG, "Inactive measurement!");
+        vTaskDelay(5000/portTICK_RATE_MS);
     }
 }
