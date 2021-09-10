@@ -1,159 +1,156 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
+<!-- Header, partial body with nav-bar generated procedurally here -->
+		<div class="w3-card-4 w3-margin" style="width:90%;">
+			<header class="w3-container w3-blue">
+				<h5><strong>OpenHAP wristband viewer</strong></h5>
+			</header>
+			<div class="w3-container">
+				<ol class="w3-ol w3-tiny">
+					<li>Turn your volume up because each time the wristband sends data(every 1 second, approximately), you should hear a beep sound.
+						A beep sound tells you that the device is sending data.If there is no beep sound, press anywhere on the page and it should 
+						start, such as here ==〉〈==</li>
+					<li><strong>Note</strong>: Check and note down the RSSI(signal strength) of the wristband at the point of entry into the house. 
+						This should be done after placement of the unit has been finalized via the <a href="/sensors/">View sensors</a> link at the top.
+					    <strong>Note</strong>: A stronger signal(RSSI) is closer to zero. For example: -56 is a better signal than -98</li>
+				</ol>
+			</div>
+		</div>
+		<div class="w3-card-4 w3-margin" style="width:90%;">
+			<header class="w3-container w3-blue">
+				<h5><strong>Wristband data</strong></h5>
+			</header>
+			<div class="w3-responsive">
+				<table class="w3-table-all w3-tiny">
+					<thead>
+						<th>
+							Msg_number
+						</th>
+						<th>
+							ID
+						</th>
+						<th>
+							Signal_strength
+						</th>
+					</thead>
+					<tr>
+						<td>
+							<spanp id="latest-0-msg-no">1(Newest)</span>
+						</td>
+						<td>
+							<span id="latest-0-id">undefined</span>
+						</td>
+						<td>
+							<span id="latest-0-rssi">undefined</span>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<span id="latest-1-msg-no">2</span>
+						</td>
+						<td>
+							<span id="latest-1-id">Undefined</span>
+						</td>
+						<td>
+							<span id="latest-1-rssi">Undefined</span>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<span id="latest-2-msg-no">3</span>
+						</td>
+						<td>
+							<span id="latest-2-id">Undefined</span>
+						</td>
+						<td>
+							<span id="latest-2-rssi">Undefined</span>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<span id="latest-3-msg-no">4</span>
+						</td>
+						<td>
+							<span id="latest-3-id">Undefined</span>
+						</td>
+						<td>
+							<span id="latest-3-rssi">Undefined</span>
+						</td>
+					</tr>
+					<tr>
+						<td>
+							<span id="latest-4-msg-no">5(Oldest)</span>
+						</td>
+						<td>
+							<span id="latest-4-id">Undefined</span>
+						</td>
+						<td>
+							<span id="latest-4-rssi">Undefined</span>
+						</td>
+					</tr>		
+				</table>
+			</div>
+			<footer class="w3-container w3-red" id="status-footer">
+				<p id="status"><strong>Status</strong>: Webpage still loading...</p>
+			</footer>
+		</div>
+		<script>
+		var audio = new Audio('/notification.mp3')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-</head>
-<table class="fixed" border="2">
-	<table class="fixed" border="2">
-		<colgroup>
-		<col width="300px"/><col width="300px"/><col width="300px"/><col width="300px"/>
-		</colgroup>
-		<thead>
-			<tr>
-				<th>
-					<a href="/files/">View files</a>
-				</th>
-				<th>
-					<a href="/sensors/">View sensors</a>
-				</th>
-				<th>
-					<a href="/bluetooth/">View wristband</a>
-				</th>
-				<th>
-					<a href="/measure/">Start measurement</a>
-				</th>
-			</tr>
-		</thead>
-	</table> -->
-	<table class="fixed" border="2">
-		<col width="1500px"	/>
-		<tr>
-			<td>
-				<h2>OpenHAP Wristband Viewer</h2>
-				<p>Turn your volume up because each time the wristband sends data(every 1 second, approximately), you should hear a beep sound.
-				   A beep sound tells you that the device is sending data.If there is no beep sound, press anywhere on the page and it should 
-				   start, such as here ==〉〈==</p>
-				<p><strong>Note</strong>: Check and note down the RSSI(signal strength) of the wristband at the point of entry into the house. 
-				   This should be done after placement of the unit has been finalized via the <a href="/sensors/">View sensors</a> link at the top.
-				   We will include this in the questionnaire at project start</p>
-				<p><strong>Note</strong>: A stronger signal(RSSI) is closer to zero. For example: -56 is a better signal than -98</p>
-			</td>
-		</tr>
-	</table>
-</table>
-<div id="container"></div>
-<h2>Wristband data</h2>
-<table class="fixed" border="2">
-	<colgroup>
-		<col width="200px"/><col width="300px"/><col width="300px"/>
-	</colgroup>
-	<thead>
-		<th>
-			Message number
-		</th>
-		<th>
-			Wristband ID(XX:XX:XX:XX:XX:XX)
-		</th>
-		<th>
-			Wristband signal strength(RSSI)
-		</th>
-	</thead>
-	<tr>
-		<td>
-			<p id="latest-0-msg-no">1 (Newest data)</p>
-		</td>
-		<td>
-			<p id="latest-0-id">undefined</p>
-		</td>
-		<td>
-			<p id="latest-0-rssi">undefined</p>
-		</td>
-	</tr>
-	<tr>
-		<td>
-			<p id="latest-1-msg-no">2</p>
-		</td>
-		<td>
-			<p id="latest-1-id">Undefined</p>
-		</td>
-		<td>
-			<p id="latest-1-rssi">Undefined</p>
-		</td>
-	</tr>
-	<tr>
-		<td>
-			<p id="latest-2-msg-no">3</p>
-		</td>
-		<td>
-			<p id="latest-2-id">Undefined</p>
-		</td>
-		<td>
-			<p id="latest-2-rssi">Undefined</p>
-		</td>
-	</tr>
-	<tr>
-		<td>
-			<p id="latest-3-msg-no">4</p>
-		</td>
-		<td>
-			<p id="latest-3-id">Undefined</p>
-		</td>
-		<td>
-			<p id="latest-3-rssi">Undefined</p>
-		</td>
-	</tr>
-	<tr>
-		<td>
-			<p id="latest-4-msg-no">5 (Oldest data)</p>
-		</td>
-		<td>
-			<p id="latest-4-id">Undefined</p>
-		</td>
-		<td>
-			<p id="latest-4-rssi">Undefined</p>
-		</td>
-	</tr>
-</table>
-<p id="status"><strong>Device status</strong>: Waiting for command from browser...</p>
-<script>
-var audio = new Audio('/notification.mp3')
+		const SOCKET_URL = "ws://192.168.4.1/ws_ble"
+		var websocketInst = new WebSocket(SOCKET_URL);
 
-const SOCKET_URL = "ws://192.168.4.1/ws_ble"
-var websocketInst = new WebSocket(SOCKET_URL);
+		var timeoutFlag;
+		var data = []
 
-var timeoutFlag;
-var data = []
-
-websocketInst.onopen = function (evt) {
-    console.log("Connection open");
-	console.log(evt);
-	timeoutFlag = setInterval(function() { 
-											websocketInst.send("get-tag-fast");
-											document.getElementById("status").innerHTML = '<strong>Device status</strong>: Received new command from browser. Preparing sensor data...';
-										}, 2000 );
-};
-websocketInst.onmessage = function (evt) {
-	document.getElementById("status").innerHTML = '<strong>Device status</strong>: Sent sensor data to browser...';
-	var response = JSON.parse(evt.data);
-	for(let i = 0; i<5; ++i){
-		if('bt_address_'+i in response && response['bt_address_'+i] != ''){	
-			if('rssi_'+i in response && response['rssi_'+i] != 0){
-				document.getElementById('latest-'+i+'-id').innerHTML = response['bt_address_'+i].toUpperCase() ;
-				document.getElementById('latest-'+i+'-rssi').innerHTML = response['rssi_'+i];
-				audio.play();
+		websocketInst.onopen = function (evt) {
+			console.log("Connection open");
+			console.log(evt);
+			timeoutFlag = setInterval(function() { 
+													websocketInst.send("get-tag-fast");
+													document.getElementById("status-footer").classList.remove('w3-green');
+													document.getElementById("status-footer").classList.remove('w3-red');
+													document.getElementById("status-footer").classList.add('w3-orange');
+													document.getElementById("status").innerHTML = '<strong>Status</strong>: Sent command to device...';
+												}, 2000 );
+		};
+		websocketInst.onmessage = function (evt) {
+			document.getElementById("status-footer").classList.remove('w3-red');
+			document.getElementById("status-footer").classList.remove('w3-orange');
+			document.getElementById("status-footer").classList.add('w3-green');
+			document.getElementById("status").innerHTML = '<strong>Status</strong>: Received sensor data from device...';
+			var response = JSON.parse(evt.data);
+			for(let i = 0; i<5; ++i){
+				if('bt_address_'+i in response && response['bt_address_'+i] != ''){	
+					if('rssi_'+i in response && response['rssi_'+i] != 0){
+						document.getElementById('latest-'+i+'-id').innerHTML = response['bt_address_'+i].toUpperCase() ;
+						document.getElementById('latest-'+i+'-rssi').innerHTML = response['rssi_'+i];
+						if(response['rssi_'+i] > - 60 && response['rssi_'+i] < 0){
+							document.getElementById('latest-'+i+'-id').style.backgroundColor = "green";
+							document.getElementById('latest-'+i+'-rssi').style.backgroundColor = "green";
+						} else if(response['rssi_'+i] > -80 && response['rssi_'+i] < 61){
+							document.getElementById('latest-'+i+'-id').style.backgroundColor = "orange";
+							document.getElementById('latest-'+i+'-rssi').style.backgroundColor = "orange";
+						} else if(response['rssi_'+i] < -81){
+							document.getElementById('latest-'+i+'-id').style.backgroundColor = "red";
+							document.getElementById('latest-'+i+'-rssi').style.backgroundColor = "red";
+						} else {
+							document.getElementById('latest-'+i+'-id').style.backgroundColor = "#F6F6F6";
+							document.getElementById('latest-'+i+'-rssi').style.backgroundColor = "#F6F6F6"	
+						}
+						audio.play();
+					}
+				}
 			}
-		}
-	}
-};
-websocketInst.onerror = function (evt) {
-	console.log("Error");
-    console.log(evt);
-};
-websocketInst.onclose = function (evt) {
-	clearInterval(timeoutFlag);
-	console.log("Connection closed");
-    console.log(evt);
-};
-</script>
+		};
+		websocketInst.onerror = function (evt) {
+			console.log("Error");
+			console.log(evt);
+		};
+		websocketInst.onclose = function (evt) {
+			clearInterval(timeoutFlag);
+			console.log("Connection closed");
+			console.log(evt);
+		};
+		</script>
+	</body>
+<html>
+	

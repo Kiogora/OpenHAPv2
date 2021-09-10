@@ -383,38 +383,26 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::websocket_handler(httpd_
 
 esp_err_t internalHardwareSubsystem::wifi::wifiManager::send_unified_header(httpd_req_t *req)
 {
-    const char* start_measurement_link = "<a href=\"/mode/toggle\">Start measurement</a>";
-    const char* stop_measurement_link = "<a href=\"/mode/toggle\">Stop measurement</a>";
+    const char* start_measurement_link = "<a href=\"/mode/toggle\" class=\"w3-bar-item w3-button w3-hover-green\">Start measurement</a>";
+    const char* stop_measurement_link = "<a href=\"/mode/toggle\" class=\"w3-bar-item w3-button w3-hover-green\">Stop measurement</a>";
 
     /* Send HTML file header */
     httpd_resp_sendstr_chunk(req,   "<!DOCTYPE html>"
                                     "<html lang=\"en\">"
                                     "<head>"
+                                    "<title>Device viewer</title>"
                                     "<meta charset=\"UTF-8\">"
-                                    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, shrink-to-fit=no\">"
+                                    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">"
+                                    "<link rel=\"stylesheet\" href=\"w3.css\">"
+                                    "<link rel=\"stylesheet\" href=\"fontawesome.min.css\">"
                                     "</head>"
-                                    "<table class=\"fixed\" border=\"2\">"
-                                    "<table class=\"fixed\" border=\"2\">"
-                                    "<colgroup>"
-                                    "<col width=\"300px\"/><col width=\"300px\"/><col width=\"300px\"/><col width=\"300px\"/>"
-                                    "</colgroup>"
-                                    "<thead>"
-                                    "<tr>"
-                                    "<th>"
-                                    "<a href=\"/\">View files</a>"
-                                    "</th>"
-                                    "<th>"
-                                    "<a href=\"/sensors/view\">View sensors</a>"
-                                    "</th>"
-                                    "<th>"
-                                    "<a href=\"/bluetooth/view\">View wristband</a>"
-                                    "</th>"
-                                    "<th>");
-    httpd_resp_sendstr_chunk(req,   (*((struct server_data *)req->user_ctx)->settingsRef).isMeasurementActive()?stop_measurement_link:start_measurement_link);
-    httpd_resp_sendstr_chunk(req,   "</th>"
-                                    "</tr>"
-                                    "</thead>"
-                                    "</table>");
+                                    "<body>"
+                                    "<div class=\"w3-bar w3-border w3-blue\">"
+                                    "<a href=\"/\" class=\"w3-bar-item w3-button w3-hover-green\">Files</a>"
+                                    "<a href=\"/sensors/view\" class=\"w3-bar-item w3-button w3-hover-green\">Sensors</a>"
+                                    "<a href=\"/bluetooth/view\" class=\"w3-bar-item w3-button w3-hover-green\">Wristband</a>");
+                                    httpd_resp_sendstr_chunk(req,   (*((struct server_data *)req->user_ctx)->settingsRef).isMeasurementActive()?stop_measurement_link:start_measurement_link);
+                                    httpd_resp_sendstr_chunk(req, "</div>");
     return ESP_OK;
 
 }
@@ -501,6 +489,26 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::plotter_get_handler(http
     return ESP_OK;  
 }
 
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::w3_css_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char css_start[] asm("_binary_w3_css_start");
+    extern const unsigned char css_end[]   asm("_binary_w3_css_end");
+    const size_t css_size = (css_end - css_start);
+    httpd_resp_set_type(req, "text/css");
+    httpd_resp_send(req, (const char *)css_start, css_size);
+    return ESP_OK;  
+}
+
+esp_err_t internalHardwareSubsystem::wifi::wifiManager::fontawesome_css_get_handler(httpd_req_t *req)
+{
+    extern const unsigned char css_start[] asm("_binary_fontawesome_min_css_start");
+    extern const unsigned char css_end[]   asm("_binary_fontawesome_min_css_end");
+    const size_t css_size = (css_end - css_start);
+    httpd_resp_set_type(req, "text/css");
+    httpd_resp_send(req, (const char *)css_start, css_size);
+    return ESP_OK;  
+}
+
 /* Send HTTP response with a run-time generated html consisting of
  * a list of all files and folders under the requested path.
  * In case of SPIFFS this returns empty list when path is any
@@ -534,15 +542,18 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
     extern const unsigned char index_html_start[] asm("_binary_index_html_start");
     extern const unsigned char index_html_end[]   asm("_binary_index_html_end");
     const size_t index_html_size = (index_html_end - index_html_start);
+
     send_unified_header(req);
     httpd_resp_send_chunk(req, (const char *)index_html_start, index_html_size);
-
-    /* Send file-list table definition and column labels */
-    httpd_resp_sendstr_chunk(req,
-        "<table class=\"fixed\" border=\"1\">"
-        "<col width=\"800px\" /><col width=\"300px\" /><col width=\"300px\" /><col width=\"100px\" />"
-        "<thead><tr><th>Name</th><th>Type</th><th>Size (bytes)</th><th>Delete</th></tr></thead>"
-        "<tbody>");
+    httpd_resp_sendstr_chunk(req, "<div class=\"w3-card-4 w3-margin\" style=\"width:90%;\">"
+                                  "<header class=\"w3-container w3-blue\">"
+                                  "<h5><strong>Device files</strong></h5>"
+                                  "</header>"
+                                  "<div class=\"w3-responsive\">"
+                                  "<table class=\"w3-table-all w3-tiny\">"
+                                  "<thead><tr><th>Name</th><th>Type</th><th>Size(bytes)</th><th>Delete</th></tr></thead>"
+                                  "<tbody>"
+                                  );
 
     /* Iterate over all files / folders and fetch their names and sizes */
     while ((entry = readdir(dir)) != NULL) {
@@ -556,36 +567,40 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
         sprintf(entrysize, "%ld", entry_stat.st_size);
 
         /* Send chunk of HTML file containing table entries with file name and size */
-        httpd_resp_sendstr_chunk(req, "<tr><td><a href=\"");
+        httpd_resp_sendstr_chunk(req, "<tr><td style=\"vertical-align: middle\"><a href=\"");
         httpd_resp_sendstr_chunk(req, req->uri);
         httpd_resp_sendstr_chunk(req, entry->d_name);
         if (entry->d_type == DT_DIR)
         {
             httpd_resp_sendstr_chunk(req, "/");
         }
-        httpd_resp_sendstr_chunk(req, "\">");
+        httpd_resp_sendstr_chunk(req, "\" download\">");
         httpd_resp_sendstr_chunk(req, entry->d_name);
-        httpd_resp_sendstr_chunk(req, "</a></td><td>");
+        httpd_resp_sendstr_chunk(req, "</a></td><td style=\"vertical-align: middle\">");
         httpd_resp_sendstr_chunk(req, entrytype);
-        httpd_resp_sendstr_chunk(req, "</td><td>");
+        httpd_resp_sendstr_chunk(req, "</td><td style=\"vertical-align: middle\">");
         httpd_resp_sendstr_chunk(req, entrysize);
-        httpd_resp_sendstr_chunk(req, "</td><td>");
+        httpd_resp_sendstr_chunk(req, "</td><td style=\"vertical-align: middle\">");
         httpd_resp_sendstr_chunk(req, "<form method=\"post\" action=\"/delete");
         httpd_resp_sendstr_chunk(req, req->uri);
         httpd_resp_sendstr_chunk(req, entry->d_name);
-        httpd_resp_sendstr_chunk(req, "\"><button type=\"submit\">Delete</button></form>");
+        httpd_resp_sendstr_chunk(req, "\"><button class=\"w3-button w3-red w3-round-large\" type=\"submit\">Delete</button></form>");
         httpd_resp_sendstr_chunk(req, "</td></tr>\n");
     }
     closedir(dir);
 
-    /* Finish the file list table */
-    httpd_resp_sendstr_chunk(req, "</tbody></table>\n");
-
     (*((struct server_data *)req->user_ctx)->storageRef).getBytesAvailable(used_bytes, total_bytes);
-    snprintf(diskutilization, sizeof(diskutilization), "%.1f%c used of maximum 100%c",(used_bytes/(float)total_bytes)*100,'%','%');
-    httpd_resp_sendstr_chunk(req, "<p><strong>Disk utilization</strong> : ");
+    snprintf(diskutilization, sizeof(diskutilization), "%.1f%c used",(used_bytes/(float)total_bytes)*100,'%');
+
+    /* Finish the file list table and html page*/
+    httpd_resp_sendstr_chunk(req, "</tbody></table>\n"
+                                  "</div>"
+                                  "<footer class=\"w3-container w3-blue\">");
+    httpd_resp_sendstr_chunk(req, "<h5><strong>Disk utilization</strong> : ");
     httpd_resp_sendstr_chunk(req, diskutilization);
-    httpd_resp_sendstr_chunk(req, "</p>\n");
+    httpd_resp_sendstr_chunk(req, "</h5>\n");
+    httpd_resp_sendstr_chunk(req, "</footer>"
+                                  "</div>");
     /* Send remaining chunk of HTML file to complete it */
     httpd_resp_sendstr_chunk(req, "</body></html>");
 
@@ -596,7 +611,7 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::http_resp_dir_html(httpd
 
 static inline bool is_file_extension(const char* filename, const char* ext)
 {
-    return (strcasecmp(&filename[strlen(filename) - sizeof(ext) + 1], ext) == 0);
+    return (strcasecmp(&filename[strlen(filename) - strlen(ext)], ext) == 0);
 }
 
 
@@ -689,13 +704,21 @@ esp_err_t internalHardwareSubsystem::wifi::wifiManager::download_get_handler(htt
         {
             return measurement_handler(req);
         }
-        else if (strcmp(req->uri, "/notification.mp3") == 0)
+        else if (strstr(req->uri, "notification.mp3") != NULL)
         {
             return mp3_get_handler(req);
         }
-        else if (strcmp(req->uri, "/d3.min.js") == 0)
+        else if (strstr(req->uri, "d3.min.js") != NULL)
         {
             return plotter_get_handler(req);
+        }
+        else if (strstr(req->uri, "w3.css") != NULL)
+        {
+            return w3_css_get_handler(req);
+        }
+        else if (strstr(req->uri, "fontawesome.min.css") != NULL)
+        {
+            return fontawesome_css_get_handler(req);
         }
         ESP_LOGE(TAG, "Failed to stat file : %s", filepath);
         /* Respond with 404 Not Found */

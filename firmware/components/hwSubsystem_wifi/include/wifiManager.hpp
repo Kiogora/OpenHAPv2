@@ -93,12 +93,16 @@ namespace internalHardwareSubsystem
     static esp_err_t favicon_get_handler(httpd_req_t *req);
     static esp_err_t mp3_get_handler(httpd_req_t *req);
     static esp_err_t plotter_get_handler(httpd_req_t *req);
+    static esp_err_t w3_css_get_handler(httpd_req_t *req);
+    static esp_err_t fontawesome_css_get_handler(httpd_req_t *req);
+
+    static esp_err_t download_get_handler(httpd_req_t *req);
+    static esp_err_t delete_post_handler(httpd_req_t *req);
     static esp_err_t measurement_handler(httpd_req_t *req);
+
     static esp_err_t http_resp_dir_html(httpd_req_t *req, const char *dirpath);
     static esp_err_t set_content_type_from_file(httpd_req_t *req, const char *filename);
     static const char* get_path_from_uri(char *dest, const char *base_path, const char *uri, size_t destsize);
-    static esp_err_t download_get_handler(httpd_req_t *req);
-    static esp_err_t delete_post_handler(httpd_req_t *req);
     };
     }
 }

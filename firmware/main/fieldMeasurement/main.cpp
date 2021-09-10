@@ -76,7 +76,8 @@ extern "C" void app_main()
                 warningLed.toggle();
                 vTaskDelay(300/portTICK_RATE_MS);
             }
-            vTaskDelay(5000/portTICK_RATE_MS);
+            warningLed.off();
+            vTaskDelay(60000/portTICK_RATE_MS);
         }
         ESP_LOGI(TAG, "Inactive measurement!");
         vTaskDelay(5000/portTICK_RATE_MS);
